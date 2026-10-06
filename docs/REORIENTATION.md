@@ -46,7 +46,7 @@ invalide.
 | 1 | Séparation des profils d'outils (assistant / atelier / legacy) | ✅ Terminée |
 | 2 | Verrouillage de `SELF_ROOT` sur l'application | ✅ Terminée |
 | 3 | Nouvelle interface : accueil vocal + Atelier | ✅ Terminée |
-| 4 | Recherche web optimisée pour la voix | 📋 Planifié |
+| 4 | Recherche web optimisée pour la voix | ✅ Terminée |
 | 5 | Prompts et expérience vocale | 📋 Planifié |
 | 6 | Atelier : auto-modification sûre | 📋 Planifié |
 | 7 | Rétrécissement du périmètre (legacy derrière flags) | 📋 Planifié |
@@ -165,3 +165,34 @@ posé ; en son absence (typiquement en test), le comportement reste inchangé.
   de `/ide`.
 - **Régression (2026-10-06)** : front **27/27** (vitest), backend spot-check
   **36/36** (tous tests Phase 0-2). Typecheck vert.
+
+### Phase 4 — Recherche web optimisée pour la voix
+
+- **Nouveau skill `server/skills/webSearch.ts`** : outil `web_quick_search`
+  (permission `network`). Appelle Gemini (`gemini-3.8-flash`) avec le
+  **grounding Google Search** (`tools: [{ googleSearch: {} }]`) via
+  `withGeminiRetry` (rotation de clés), et renvoie `{ answer, sources[] }`. Les
+  sources sont extraites de `groundingMetadata.groundingChunks[].web` (helper
+  `extractSources`, tolérant aux variations du SDK). Cache court en mémoire
+  (TTL 60 s, 50 entrées max) pour réduire la latence des requêtes répétées.
+  Piloté par `LEANNA_WEB_GROUNDING` : si `false`, renvoie une erreur invitant à
+  `browser_research`.
+  - Les 3 niveaux de recherche web du plan : (1) `web_quick_search` [nouveau],
+    (2) `browser_research` [existant], (3) `browser_open` + lecture [existant].
+- **Enregistrement** : `webSearchSkill` ajouté au bootstrap (`server.ts`) ;
+  `web_quick_search` ajouté à `ASSISTANT_TOOLS` (toolProfiles) et à
+  `TIER1_CORE_TOOLS` (LiveSocketHandler).
+- **Sources à l'écran** : le LiveSocketHandler pousse un message WS
+  `{ web_sources: [...] }` à la fin d'un `web_quick_search`. Le client
+  (`useLiveAPI`) les attache au prochain message de l'assistant (via
+  `pendingSourcesRef`), et `AssistantView` les affiche dans un petit
+  `SourcesPanel` (titre + domaine, jamais l'URL lue à voix haute). Le type
+  `ContextSource` a été étendu (`url`, `title`, `snippet`).
+- **Tests** : `server/skills/webSearch.test.ts` (7 cas : metadata, parsing des
+  sources, domaine, flag désactivé, validation Zod).
+- **Régression (2026-10-06)** : backend **933 tests, 930 réussis, 3 échecs**
+  (toujours les 3 `graphify`), soit +7 tests ; front **27/27**. Typecheck vert.
+- **Point à suivre [À VÉRIFIER]** : compatibilité `googleSearch` +
+  `functionDeclarations` dans une session **Live** non vérifiée côté API — c'est
+  pourquoi on a choisi la voie serveur `web_quick_search` (`generateContent`
+  hors session Live), robuste quel que soit le modèle Live.
