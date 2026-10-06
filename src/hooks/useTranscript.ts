@@ -9,6 +9,10 @@ export interface ContextSource {
   tool: string;
   lines?: string;
   excluded?: boolean;
+  /** Source web (web_quick_search) : titre, URL et extrait. */
+  url?: string;
+  title?: string;
+  snippet?: string;
 }
 
 export interface TranscriptEntry {

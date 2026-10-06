@@ -29,6 +29,8 @@ export type SessionProfile = "assistant" | "atelier";
  * figure : c'est l'invariant central de la réorientation.
  */
 export const ASSISTANT_TOOLS: ReadonlySet<string> = new Set([
+  // Recherche web rapide (grounding Google Search) — niveau 1, pensé pour la voix
+  "web_quick_search",
   // Recherche et navigation web
   "browser_search",
   "browser_research",

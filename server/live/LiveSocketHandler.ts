@@ -437,6 +437,7 @@ export function attachLiveWebSocket(
         'browser_reload', 'browser_snapshot', 'browser_click', 'browser_type',
         'browser_inspect', 'browser_get_links', 'browser_open_link',
         'browser_summarize_page', 'browser_research',
+        'web_quick_search',
         // Sprint 1 — J1 : Accessibilité
         'browser_get_accessibility_snapshot', 'browser_click_by_role', 'browser_type_by_label',
         // Sprint 1 — J2 : Robustesse
@@ -1741,6 +1742,16 @@ async function handleToolCall(
         info: JSON.stringify(call.args),
         ...(call.name === 'security_audit' ? { result: response } : {}),
       }));
+
+      // ── Sources web (Phase 4) ────────────────────────────────────────────
+      // web_quick_search renvoie { answer, sources[] } : on pousse les sources
+      // au client pour affichage dans le panneau Sources (sans URL lue à voix
+      // haute — l'assistant cite par nom de site).
+      if (call.name === 'web_quick_search' && (response as any)?.sources?.length) {
+        try {
+          clientWs.send(JSON.stringify({ web_sources: (response as any).sources }));
+        } catch { /* ignore si WS fermé */ }
+      }
 
       // Auto-verify
       const WRITE_TOOLS_VERIFY = ['write_project_file', 'modify_project_file', 'patch_project_file', 'rename_project_file'];

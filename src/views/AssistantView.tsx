@@ -8,9 +8,46 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Wrench, Settings, MessageCircle } from 'lucide-react';
+import { Mic, MicOff, Wrench, Settings, MessageCircle, Globe } from 'lucide-react';
 import { useOrbState } from '../hooks/useOrbState.js';
 import { useLiveAPIContext } from '../context/LiveAPIContext.js';
+import type { ContextSource } from '../hooks/useTranscript.js';
+
+/** Panneau Sources — affiche les sources web citées (titre + domaine, pas d'URL lue). */
+function SourcesPanel({ sources }: { sources: ContextSource[] }) {
+  const domain = (url?: string) => {
+    if (!url) return '';
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return url;
+    }
+  };
+  return (
+    <div className="mt-1.5 flex flex-col gap-1 max-w-[85%]">
+      <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        Sources
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {sources.map((s) => (
+          <a
+            key={s.id}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors hover:underline"
+            style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}
+            title={s.title || s.url}
+          >
+            <Globe size={11} />
+            <span className="max-w-[160px] truncate">{s.title || domain(s.url)}</span>
+            <span style={{ color: 'var(--text-muted)' }}>· {domain(s.url)}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AssistantView() {
   const orb = useOrbState();
@@ -163,25 +200,31 @@ export default function AssistantView() {
           </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {transcript.map((entry) => (
-              <div
-                key={entry.id}
-                className={`flex ${entry.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+            {transcript.map((entry) => {
+              const webSources = (entry.sources ?? []).filter((s) => s.url);
+              return (
                 <div
-                  className="rounded-2xl px-4 py-2 max-w-[85%] text-sm leading-relaxed"
-                  style={{
-                    backgroundColor:
-                      entry.role === 'user'
-                        ? 'var(--accent-subtle, rgba(14,165,233,0.15))'
-                        : 'var(--bg-secondary, rgba(255,255,255,0.05))',
-                    color: 'var(--text-primary)',
-                  }}
+                  key={entry.id}
+                  className={`flex flex-col ${entry.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
-                  {entry.text}
+                  <div
+                    className="rounded-2xl px-4 py-2 max-w-[85%] text-sm leading-relaxed"
+                    style={{
+                      backgroundColor:
+                        entry.role === 'user'
+                          ? 'var(--accent-subtle, rgba(14,165,233,0.15))'
+                          : 'var(--bg-secondary, rgba(255,255,255,0.05))',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {entry.text}
+                  </div>
+                  {webSources.length > 0 && (
+                    <SourcesPanel sources={webSources} />
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={transcriptEndRef} />
           </div>
         )}

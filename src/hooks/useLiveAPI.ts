@@ -226,6 +226,21 @@ export function useLiveAPI() {
         });
       }
     }
+    // ── Sources web (Phase 4) : web_quick_search ───────────────────────────
+    // Attachées au prochain message de l'assistant, comme les sources fichier.
+    if (Array.isArray(msg.web_sources)) {
+      for (const s of msg.web_sources as Array<{ title?: string; url?: string; snippet?: string }>) {
+        if (!s?.url) continue;
+        pendingSourcesRef.current.push({
+          id: `${Date.now()}-${pendingSourcesRef.current.length}`,
+          path: s.title || s.url,
+          tool: 'web_quick_search',
+          url: s.url,
+          title: s.title,
+          snippet: s.snippet,
+        });
+      }
+    }
     if (msg.interrupted) {
       // Réinitialiser le tracking de latence si l'assistant est interrompu
       utteranceStartRef.current = null;
