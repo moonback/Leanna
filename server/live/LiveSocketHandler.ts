@@ -33,6 +33,9 @@ import {
 } from './toolProfiles.js';
 import { getProductConfig } from '../config/environment.js';
 import { getProfilePromptSections } from '../runtime/prompts/profilePrompts.js';
+import { markToolUsage, isSessionTainted, clearSession } from '../utils/sessionTrust.js';
+import { consumeAtelierToken } from '../selfedit/selfEditToken.js';
+import { randomUUID } from 'node:crypto';
 
 // Type compatible avec l'ancien SkillManager pour une migration progressive
 type SkillManager = SkillManagerV2;
@@ -197,8 +200,12 @@ export function attachLiveWebSocket(
       }
     });
 
+    // Identifiant de session pour le verrou web↔code (Phase 6).
+    const sessionId = randomUUID();
+
     clientWs.on('close', () => {
       unsubscribeValidation();
+      clearSession(sessionId);
     });
 
     const urlParams = new URLSearchParams(req.url?.split('?')[1] || '');
@@ -409,12 +416,15 @@ export function attachLiveWebSocket(
       // refusé hors mode legacy-ide ; le jeton Atelier à usage unique arrive en
       // Phase 6 (TODO: brancher ?atelier_token= ici).
       const productConfig = getProductConfig();
+      // Jeton Atelier à usage unique (Phase 6) : requis pour passer en profil
+      // atelier hors mode legacy-ide. Consommé ici (un seul usage).
+      const atelierTokenValid =
+        productConfig.selfEditEnabled && consumeAtelierToken(urlParams.get('atelier_token'));
       const sessionProfile: SessionProfile = resolveSessionProfile({
         profileParam: urlParams.get('profile'),
         legacyMode: urlParams.get('mode'),
         productMode: productConfig.productMode,
-        // TODO (Phase 6) : valider un jeton Atelier à usage unique émis par l'UI.
-        atelierTokenValid: false,
+        atelierTokenValid,
       });
       const legacyAgentsEnabled = productConfig.legacyAgentsEnabled;
 
@@ -898,7 +908,7 @@ export function attachLiveWebSocket(
                     autoSummarizeContext?.();
                   }
                 },
-                { sessionProfile, legacyAgentsEnabled, mcpToolNames: sessionMcpToolNames },
+                { sessionProfile, legacyAgentsEnabled, mcpToolNames: sessionMcpToolNames, sessionId },
               ).catch(e =>
                 console.error('[handleToolCall] Erreur non catchée:', e),
               );
@@ -1486,6 +1496,7 @@ async function handleToolCall(
     sessionProfile?: SessionProfile;
     legacyAgentsEnabled?: boolean;
     mcpToolNames?: ReadonlySet<string>;
+    sessionId?: string;
   } = {},
 ): Promise<void> {
   const functionResponses: any[] = [];
@@ -1493,6 +1504,7 @@ async function handleToolCall(
   const sessionProfile: SessionProfile = guardOptions.sessionProfile ?? 'assistant';
   const legacyAgentsEnabled = guardOptions.legacyAgentsEnabled ?? false;
   const mcpToolNames = guardOptions.mcpToolNames ?? new Set<string>();
+  const sessionId = guardOptions.sessionId ?? '';
   const browserReadPending = deps?.browserReadPending;
   const browserActionPending = deps?.browserActionPending;
   const currentProfile = deps?.getCurrentProfile?.() ?? {};
@@ -1582,6 +1594,28 @@ async function handleToolCall(
           clientWs.send(JSON.stringify({ tool_used: call.name, info: `[BLOQUÉ — profil ${sessionProfile}]` }));
           continue;
         }
+      }
+
+      // ── Verrou web ↔ code (Phase 6) ──────────────────────────────────────
+      // Règle de sécurité n°1 : le contenu web est non fiable. Une session qui
+      // a lu du web (teintée) ne peut PAS écrire de code. Pour modifier Leanna,
+      // il faut ouvrir une session Atelier propre (sans web). On teinte d'abord
+      // selon l'outil courant, puis on refuse l'écriture si la session est
+      // teintée.
+      markToolUsage(sessionId, call.name);
+      if (WRITE_TOOLS.has(call.name) && isSessionTainted(sessionId)) {
+        functionResponses.push({
+          id: call.id,
+          name: call.name,
+          response: {
+            error:
+              `[VERROU WEB↔CODE] Cette session a consulté du web : l'écriture de code y est interdite ` +
+              `(le contenu web n'est pas fiable). Ouvre une session Atelier propre pour modifier le code.`,
+            blockedByWebTaint: true,
+          },
+        });
+        clientWs.send(JSON.stringify({ tool_used: call.name, info: '[BLOQUÉ — verrou web↔code]' }));
+        continue;
       }
 
       // ── Garde de démarrage (anti-race condition) ─────────────────────────

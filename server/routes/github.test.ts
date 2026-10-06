@@ -4,6 +4,12 @@ import express from 'express';
 import type { Server } from 'http';
 import { createGithubRouter } from './github.js';
 
+// Ces tests vérifient le comportement FONCTIONNEL du routeur GitHub, pas les
+// gardes de mode produit (legacyOnly). On neutralise les flags pour être
+// déterministe quel que soit l'environnement (dotenv / fuite entre fichiers).
+delete process.env.LEANNA_PRODUCT_MODE;
+delete process.env.LEANNA_ENABLE_LEGACY_AGENTS;
+
 test('github routes: GET /issues validates missing params', async () => {
   const mockSkillManager: any = {
     handleToolCall: async () => ({ status: 'success' }),

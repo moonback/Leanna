@@ -48,8 +48,8 @@ invalide.
 | 3 | Nouvelle interface : accueil vocal + Atelier | ✅ Terminée |
 | 4 | Recherche web optimisée pour la voix | ✅ Terminée |
 | 5 | Prompts et expérience vocale | ✅ Terminée |
-| 6 | Atelier : auto-modification sûre | 📋 Planifié |
-| 7 | Rétrécissement du périmètre (legacy derrière flags) | 📋 Planifié |
+| 6 | Atelier : auto-modification sûre | 🟡 Partielle (voir note git) |
+| 7 | Rétrécissement du périmètre (legacy derrière flags) | ✅ Terminée |
 | 8 | Tests, doc, packaging | 📋 Planifié |
 
 ## Journal
@@ -241,3 +241,97 @@ posé ; en son absence (typiquement en test), le comportement reste inchangé.
   `safeguards.ignore.test.ts`).
 - **Régression (2026-10-06)** : backend **936 tests, 933 réussis, 3 échecs**
   (toujours les 3 `graphify`), soit +3 tests ; front **27/27**. Typecheck vert.
+
+### Phase 6 — Atelier : auto-modification sûre (partielle)
+
+> **Contrainte structurante** : dans ce projet, **git est volontairement
+> désactivé** (`server/utils/checkpoint.ts` est un no-op documenté ;
+> `createCheckpoint` renvoie `null`, `rollbackToCheckpoint` renvoie `false` ;
+> les routes git répondent « Git est entièrement désactivé »). Le pipeline
+> « branche self-edit + `git reset --hard` » décrit par le plan **n'est donc pas
+> applicable tel quel**. La réversibilité réelle de l'app passe par le
+> **sandbox transactionnel** existant (`server/utils/sandbox.ts`, checkpoint +
+> rollback), pas par git. On a donc livré les briques de sécurité réelles et
+> évité de construire un Watchdog/rollback git factice.
+
+**Livré** :
+- **`server/utils/sessionTrust.ts`** — verrou web↔code. Une session Live qui a
+  utilisé un outil web (`web_quick_search`, `browser_*` de lecture) est
+  « teintée ». Teinte isolée par `sessionId`, oubliée à la fermeture.
+- **`server/selfedit/selfEditToken.ts`** — jeton Atelier à usage unique
+  (`randomBytes(32)`, TTL 5 min, consommé au premier usage). Complète le TODO
+  de Phase 1.
+- **`server/routes/selfedit.ts`** — `POST /api/selfedit/token` émet un jeton
+  (403 `SELF_EDIT_DISABLED` si `LEANNA_ENABLE_SELF_EDIT=false`). Monté dans
+  `server.ts` après `requireAuth`.
+- **`LiveSocketHandler`** :
+  - un `sessionId` est créé par connexion ; sa teinte est nettoyée à `close` ;
+  - `resolveSessionProfile` reçoit désormais `atelierTokenValid =
+    selfEditEnabled && consumeAtelierToken(?atelier_token)` — le passage en
+    profil atelier exige un jeton valide (le TODO de Phase 1 est levé) ;
+  - garde d'exécution **web↔code** dans `handleToolCall` : chaque outil web
+    teinte la session ; un outil d'écriture (`WRITE_TOOLS`) sur une session
+    teintée est refusé (`blockedByWebTaint`).
+- La confirmation reste **par clic** (`confirmationBridge`, timeout 30 s, jamais
+  vocale) et `validateBuild()` (tsc) fournit la vérification réelle.
+- **Tests** : `sessionTrust.test.ts` (5), `selfEditToken.test.ts` (5),
+  `selfedit.test.ts` (2).
+- **Régression (2026-10-06)** : backend **948 tests, 944 réussis, 4 échecs**
+  (3 `graphify` + 1 `DistributedLock`), soit +12 tests ; front **27/27**.
+  Typecheck vert. `DistributedLock.test.ts` (« renew extends the TTL while
+  held ») est un **flake de timing préexistant** : il passe en isolation et
+  n'a aucun lien avec les changements de la Phase 6 (ni timers, ni verrous, ni
+  Redis touchés).
+
+**Reporté / non applicable (git désactivé)** :
+- `SelfEditSession.ts` (branche git par session), `Watchdog.ts` +
+  `scripts/healthcheck.mjs` (rollback `git reset --hard` après redémarrage KO)
+  et le merge/annulation de branche. Une version adossée au sandbox
+  transactionnel (plutôt qu'à git) serait le bon chemin si l'on veut un
+  rollback automatisé ; c'est une décision d'architecture à prendre
+  explicitement, hors du périmètre « non destructif » de cette passe.
+
+### Phase 7 — Rétrécissement du périmètre
+
+Approche non destructive, pilotée par `LEANNA_ENABLE_LEGACY_AGENTS`. Point
+rassurant confirmé par l'investigation : tous les consommateurs de
+`missionExecutor`/`leannaCore` sont déjà **null-safe**, donc ne pas initialiser
+ces sous-systèmes dégrade proprement sans casser le démarrage.
+
+- **`server.ts`** :
+  - `legacyAgentsEnabled` lu une fois en tête (`getProductConfig()`).
+  - Le bloc d'initialisation du **Mission System** (`onReady`) n'est exécuté
+    qu'avec le flag. Sinon `skillManager.missionExecutor` reste `null` → routes
+    missions en 503, `LeannaCore.executeMission` en escalade.
+  - **`leannaCore.start()`** n'est appelé qu'avec le flag : hors flag, aucun
+    heartbeat ni tâche autonome (leannaCore reste instancié pour servir les
+    getters WS/metrics null-safe).
+  - Le `setInterval` du broadcaster missions n'est pas armé hors flag (évite un
+    timer tournant à vide).
+- **`server/routes/legacyGuard.ts`** : `areLegacyAgentsEnabled()` +
+  middleware `legacyAgentsOnly` (410 `LEGACY_AGENTS_GONE`). La restriction ne
+  s'active que si le flag est explicitement posé (défaut : pas de restriction).
+- **Routes gardées** : `/api/agents` et `/api/v2/agents` (via `legacyAgentsOnly`).
+  `/api/missions` est monté sur `/api` (préfixe partagé) et ne peut pas recevoir
+  le middleware sans bloquer d'autres routes ; il dégrade déjà en 503 quand
+  `missionExecutor` est null. `/api/v2/metrics` reste disponible.
+- **Non touché** (requis par le chemin vocal) : `Supervisor`,
+  `understandingEngine`/`knowledgeGraph`/`projectMemory`, MCP.
+- **Smoke test de démarrage** : serveur lancé avec
+  `LEANNA_ENABLE_LEGACY_AGENTS=false` → log `⏭️ Mission System désactivé`,
+  `Server running on http://127.0.0.1:4000`, `GET /api/health` → `200
+  {"status":"ok"}`. Le risque « désactiver les agents casse le démarrage » est
+  écarté.
+- **Tests** : `legacyGuard.test.ts` étendu (+3 : `areLegacyAgentsEnabled`,
+  `legacyAgentsOnly` pass/410). `github.test.ts` et `self-root.test.ts` rendus
+  déterministes (neutralisation des flags en tête, comme en Phase 5).
+- **Régression (2026-10-06)** : backend **951 tests, 947 réussis, 4 échecs**
+  (3 `graphify` + 1 `DistributedLock`, flakes connus) ; front **27/27**.
+  Typecheck vert.
+
+**Non fait (plus intrusif, risque élevé)** : déchargement complet de la flotte
+d'agents de délégation (`agentOrchestrator` enregistre toujours 20 rôles au
+démarrage) et masquage UI des vues legacy (Notebooks/Documents/Observability/
+Autonomy derrière « Avancé »). Ces éléments relèvent d'un travail UI/bootstrap
+plus profond ; la désactivation du **runtime autonome** (la partie coûteuse et
+à risque) est, elle, effective.
