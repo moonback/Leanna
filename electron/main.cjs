@@ -141,6 +141,25 @@ function createWindow(splash, splashMinEnd) {
   const port = process.env.VITE_SERVER_PORT || 4000;
   const startUrl = process.env.ELECTRON_START_URL || `http://127.0.0.1:${port}`;
   log('Loading URL:', startUrl);
+
+  // ── Permissions micro/caméra (réorientation « voice-first ») ──────────────
+  // L'assistant vocal utilise getUserMedia(microphone) dans le renderer. Sans
+  // ce handler, Electron refuse la capture audio par défaut (surtout sous
+  // Windows), ce qui empêche l'orbe de fonctionner. On accorde media/audio/
+  // vidéo (le partage d'écran et la webcam sont des fonctions existantes) et on
+  // refuse le reste par prudence. Le contenu reste chargé depuis 127.0.0.1.
+  try {
+    win.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
+      const allowed = ['media', 'audioCapture', 'videoCapture', 'display-capture'];
+      callback(allowed.includes(permission));
+    });
+    // Électron >= certaines versions consulte aussi un check synchrone.
+    win.webContents.session.setPermissionCheckHandler((_wc, permission) =>
+      ['media', 'audioCapture', 'videoCapture', 'display-capture'].includes(permission));
+  } catch (e) {
+    log('Permission handler setup failed:', e && e.message);
+  }
+
   win.loadURL(startUrl);
 
   // Afficher la fenêtre principale une fois le contenu chargé

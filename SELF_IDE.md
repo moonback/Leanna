@@ -2,6 +2,13 @@
 
 > Leanna ne lit, n'écrit et n'exécute **que sur le code source du projet ouvert**. Ce document décrit l'architecture self-referential et explique comment étendre les skills en respectant le périmètre verrouillé.
 
+> **⚠️ Réorientation « voice-first » (voir `docs/REORIENTATION.md`)** — En mode
+> assistant (défaut, `LEANNA_PRODUCT_MODE=assistant`), `SELF_ROOT` est verrouillé
+> sur l'application Leanna elle-même : il n'y a plus de workspaces externes, et
+> l'IDE n'est accessible qu'en mode **Atelier** (auto-modification), via un jeton
+> à usage unique. Le comportement « IDE multi-projets » décrit ci-dessous ne
+> s'applique qu'en `LEANNA_PRODUCT_MODE=legacy-ide`.
+
 ---
 
 ## 1. Principe
