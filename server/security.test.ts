@@ -5,6 +5,10 @@ import assert from 'node:assert/strict';
 import { authenticateRequest, createRateLimiter, resolveWorkspacePath } from './security.js';
 import { SELF_ROOT, normalizeSelfPath, isWriteForbidden, isCriticalFile, setSelfRoot } from './utils/selfRoot.js';
 
+// Un test vérifie le rejet d'un chemin inexistant par setSelfRoot : neutraliser
+// le verrou « voice-first » pour que l'erreur attendue soit bien « n'existe pas ».
+delete process.env.LEANNA_PRODUCT_MODE;
+
 // ── SELF_ROOT bootstrap ───────────────────────────────────────────────────────
 // security.test.ts lives in server/ → one level up is the project root.
 // Must run before any test so that SELF_ROOT live binding is populated.

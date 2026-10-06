@@ -6,6 +6,8 @@ import path from 'path';
 import { codebaseSkill, buildAnalysisPrompt } from './codebase.js';
 import { normalizeProjectPath } from './codebaseHelpers.js';
 import { resetSelfRoot, setSelfRoot } from '../utils/selfRoot.js';
+// SELF_ROOT pointe vers des dossiers temporaires : neutraliser le verrou voice-first.
+delete process.env.LEANNA_PRODUCT_MODE;
 
 test('buildAnalysisPrompt creates a concise analysis prompt for the codebase markdown', () => {
   const codebaseMarkdown = '# Codebase\n\n## Structure\n- src/\n';

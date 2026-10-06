@@ -4,6 +4,9 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { setSelfRoot } from './selfRoot.js';
+// Ces tests pointent SELF_ROOT vers des dossiers temporaires : on neutralise le
+// verrou « voice-first » (immunité à une fuite d'env d'un autre fichier de test).
+delete process.env.LEANNA_PRODUCT_MODE;
 import {
   getSandboxRoot,
   isSandboxActive,

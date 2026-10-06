@@ -21,6 +21,9 @@ import {
 } from '../utils/sandbox.js';
 import { LEANNAIGNORE_FILENAME } from '../utils/leannaignore.js';
 
+// SELF_ROOT pointe vers des dossiers temporaires : neutraliser le verrou voice-first.
+delete process.env.LEANNA_PRODUCT_MODE;
+
 async function createTestServer() {
   const app = express();
   app.use(express.json());

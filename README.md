@@ -65,6 +65,19 @@
 
 </div>
 
+> ### 🎙️ Réorientation « voice-first » (en cours)
+>
+> Leanna évolue d'un « IDE agentique multi-projets » vers un **assistant vocal
+> (Gemini Live) avec recherche web fiable**. Le code/IDE est désormais réservé à
+> l'**auto-modification** de Leanna (mode **Atelier**). L'accueil par défaut est
+> l'orbe vocale ; l'IDE vit sur la route `/atelier`.
+>
+> Piloté par des flags (`LEANNA_PRODUCT_MODE`, `LEANNA_ENABLE_SELF_EDIT`,
+> `LEANNA_ENABLE_LEGACY_AGENTS`, `LEANNA_WEB_GROUNDING` — voir `.env.example`).
+> Pour l'ancien comportement IDE multi-projets : `LEANNA_PRODUCT_MODE=legacy-ide`.
+>
+> 📄 Détails et avancement par phase : [`docs/REORIENTATION.md`](docs/REORIENTATION.md).
+
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- TABLE OF CONTENTS                                                       -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->

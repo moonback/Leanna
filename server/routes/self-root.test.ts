@@ -7,6 +7,11 @@ import { fileURLToPath } from 'url';
 import { createSelfRootRouter } from './self-root.js';
 import { setSelfRoot } from '../utils/selfRoot.js';
 
+// Tests fonctionnels du routeur self-root : neutraliser les flags de mode
+// produit (legacyOnly / verrou setSelfRoot) pour être déterministe.
+delete process.env.LEANNA_PRODUCT_MODE;
+delete process.env.LEANNA_ENABLE_LEGACY_AGENTS;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..', '..');

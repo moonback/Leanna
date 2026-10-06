@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateEnvironment } from "./environment.js";
+import { validateEnvironment, getProductConfig } from "./environment.js";
 
 test("validateEnvironment accepts optional and valid configuration", () => {
   assert.doesNotThrow(() => validateEnvironment({
@@ -40,4 +40,58 @@ test("validateEnvironment requires the Supabase variables as a pair", () => {
     () => validateEnvironment({ SUPABASE_SERVICE_ROLE_KEY: "service-role-key" }),
     /SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY doivent être définies ensemble/,
   );
+});
+
+test("validateEnvironment accepts valid product flags", () => {
+  assert.doesNotThrow(() => validateEnvironment({
+    LEANNA_PRODUCT_MODE: "assistant",
+    LEANNA_ENABLE_SELF_EDIT: "true",
+    LEANNA_ENABLE_LEGACY_AGENTS: "false",
+    LEANNA_WEB_GROUNDING: "true",
+  }));
+  assert.doesNotThrow(() => validateEnvironment({ LEANNA_PRODUCT_MODE: "legacy-ide" }));
+});
+
+test("validateEnvironment rejects an unknown product mode", () => {
+  assert.throws(
+    () => validateEnvironment({ LEANNA_PRODUCT_MODE: "voice" }),
+    /LEANNA_PRODUCT_MODE/,
+  );
+});
+
+test("validateEnvironment rejects a non-boolean self-edit flag", () => {
+  assert.throws(
+    () => validateEnvironment({ LEANNA_ENABLE_SELF_EDIT: "maybe" }),
+    /LEANNA_ENABLE_SELF_EDIT/,
+  );
+});
+
+test("getProductConfig applies voice-first defaults on an empty environment", () => {
+  const config = getProductConfig({});
+  assert.equal(config.productMode, "assistant");
+  assert.equal(config.selfEditEnabled, true);
+  assert.equal(config.legacyAgentsEnabled, false);
+  assert.equal(config.webGroundingEnabled, true);
+});
+
+test("getProductConfig reads explicit flag values", () => {
+  const config = getProductConfig({
+    LEANNA_PRODUCT_MODE: "legacy-ide",
+    LEANNA_ENABLE_SELF_EDIT: "false",
+    LEANNA_ENABLE_LEGACY_AGENTS: "true",
+    LEANNA_WEB_GROUNDING: "0",
+  });
+  assert.equal(config.productMode, "legacy-ide");
+  assert.equal(config.selfEditEnabled, false);
+  assert.equal(config.legacyAgentsEnabled, true);
+  assert.equal(config.webGroundingEnabled, false);
+});
+
+test("getProductConfig falls back to defaults on invalid values", () => {
+  const config = getProductConfig({
+    LEANNA_PRODUCT_MODE: "nonsense",
+    LEANNA_ENABLE_SELF_EDIT: "nope",
+  });
+  assert.equal(config.productMode, "assistant");
+  assert.equal(config.selfEditEnabled, true);
 });

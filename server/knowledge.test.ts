@@ -10,6 +10,8 @@ import { knowledgeGraph } from './knowledge/KnowledgeGraph.js';
 import { projectMemory } from './knowledge/ProjectMemory.js';
 import { astCallGraph } from './knowledge/ASTCallGraph.js';
 import { setSelfRoot } from './utils/selfRoot.js';
+// SELF_ROOT pointe vers des dossiers temporaires : neutraliser le verrou voice-first.
+delete process.env.LEANNA_PRODUCT_MODE;
 
 test('GET /api/knowledge/health returns knowledge system health structure', async () => {
   const app = express();

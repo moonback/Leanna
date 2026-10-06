@@ -18,6 +18,9 @@ import {
 } from './leannaignore.js';
 import { isWriteForbidden, setSelfRoot, resetSelfRoot } from './selfRoot.js';
 
+// SELF_ROOT pointe vers des dossiers temporaires : neutraliser le verrou voice-first.
+delete process.env.LEANNA_PRODUCT_MODE;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function makeTempRoot(): string {

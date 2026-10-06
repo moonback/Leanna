@@ -12,6 +12,7 @@ Leanna est un **OS agentique local-first** : un IDE, un runtime d'agents autonom
 
 | Version | Date | Changements majeurs |
 |---|---|---|
+| **1.5.0 (en cours)** | 2026-10-06 | Lancement de la **réorientation « voice-first »** (Phase 0) : assistant vocal + recherche web comme produit principal, IDE réservé à l'auto-modification (Atelier). Tag git `pre-reorientation`, branche `reorient/voice-first`, flags de produit (`LEANNA_PRODUCT_MODE`, `LEANNA_ENABLE_SELF_EDIT`, `LEANNA_ENABLE_LEGACY_AGENTS`, `LEANNA_WEB_GROUNDING`) câblés via `getProductConfig()`, `docs/REORIENTATION.md`. Voir le plan d'action à la racine. |
 | **1.4.0** | 2026-10-04 | Sandbox d'exécution des skills tiers : `SkillWorker` (worker_threads isolé), `agentDefinitionSchema` (Zod + HMAC-SHA256), `AgentLoader` hardened (SHA-256 fichier + allowlist), `DynamicAgentRegistry.registerAgent()` validé, `McpBridge.sanitizePathArgs()` récursif + résolution de symlinks. 32 nouveaux tests. |
 | **1.3.0** | 2026-09-25 | Re-audit post-`AGENTIC_RUNTIME` et `AUTONOMY_IMPLEMENTATION`. 11 items migrés 📋/🟡 → ✅ (preuves fichier+test). Dette technique recalculée. KPI actualisés. |
 | 1.3.0 | 2026-09-04 | Refonte complète : audit du code, 5 paris, 6 phases R0→R6, registre de risques. |

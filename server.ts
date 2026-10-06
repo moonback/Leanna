@@ -33,6 +33,8 @@ import { createGeminiKeysRouter } from "./server/routes/gemini-keys.js";
 import { createEnvRouter } from "./server/routes/env.js";
 import { createSandboxRouter, createVerifyExitCodeRouter } from "./server/routes/sandbox.js";
 import { createCheckpointRouter } from "./server/routes/checkpoint.js";
+import { createSelfEditRouter } from "./server/routes/selfedit.js";
+import { getProductConfig } from "./server/config/environment.js";
 import ideRouter from "./server/routes/ide.js";
 import { createBrowserRouter } from "./server/routes/browser.js";
 import { attachLiveWebSocket } from "./server/live/LiveSocketHandler.js";
@@ -52,6 +54,7 @@ import { createWorkspaceRouter } from "./server/routes/workspace.js";
 import { createMissionsRouter } from "./server/routes/missions.js";
 import { createSelfRootRouter } from "./server/routes/self-root.js";
 import { createFtpRouter } from "./server/routes/ftp.js";
+import { legacyOnly, legacyAgentsOnly } from "./server/routes/legacyGuard.js";
 import safeguardsRouter from "./server/routes/safeguards.js";
 import pm2Router from "./server/routes/pm2.js";
 import { initSandboxWatchWSS } from "./server/routes/sandbox-watch.js";
@@ -274,6 +277,7 @@ import { timeSkill } from "./server/skills/time.js";
 import { verifySkill } from "./server/skills/verify.js";
 import { securityAuditSkill } from "./server/skills/securityAudit.js";
 import { weatherSkill } from "./server/skills/weather.js";
+import { webSearchSkill } from "./server/skills/webSearch.js";
 import { projectSkill } from "./server/skills/project.js";
 import { agentsSkill } from "./server/skills/agents.js";
 import { missionSkill } from "./server/skills/mission.js";
@@ -292,12 +296,16 @@ import { LeannaCore } from "./server/autonomy/LeannaCore.js";
 import { AutonomyPersistence } from "./server/autonomy/AutonomyPersistence.js";
 import { RedisEventBridge } from "./server/runtime/RedisEventBridge.js";
 
+// Réorientation « voice-first » (Phase 7) : les sous-systèmes agents/missions/
+// autonomie legacy ne sont chargés qu'avec ce flag. Lu une fois ici.
+const legacyAgentsEnabled = getProductConfig().legacyAgentsEnabled;
+
 const { runtime, skillManager, agentic } = bootstrapRuntimeSync({
   skills: [
     automationSkill, browserSkill, codebaseSkill, githubSkill,
     guidelinesSkill, historySkill, knowledgeSkill, listSkill,
     memorySkill, hierarchicalMemorySkill, reasoningSkill, systemSkill, timeSkill,
-    verifySkill, securityAuditSkill, weatherSkill, projectSkill, agentsSkill,
+    verifySkill, securityAuditSkill, weatherSkill, webSearchSkill, projectSkill, agentsSkill,
     missionSkill, aiStudioDirectivesSkill, documentLinkerSkill,
     documentKnowledgeSkill, richDocumentSkill, imageGenerationSkill, graphifySkill, telegramSkill,
     createSmartSkills((name: string, args: any) => skillManager.handleToolCall(name, args)),
@@ -337,7 +345,13 @@ const { runtime, skillManager, agentic } = bootstrapRuntimeSync({
     }
     
     // Initialiser le Mission System (doit être fait après que les outils soient enregistrés)
-    try {
+    // Réorientation « voice-first » (Phase 7) : le Mission System (et donc
+    // skillManager.missionExecutor) n'est chargé qu'avec les agents legacy. Hors
+    // flag, missionExecutor reste null et tous ses consommateurs dégradent
+    // proprement (routes missions → 503, LeannaCore.executeMission → escalade).
+    if (!legacyAgentsEnabled) {
+      console.log(`[Bootstrap] ⏭️ Mission System désactivé (LEANNA_ENABLE_LEGACY_AGENTS=false).`);
+    } else try {
       const missionModule = await import("./server/mission/index.js");
       const { Executor, MissionStore, AutonomyPolicy } = missionModule;
       const { initMissionSystem, setDryRunReportProvider } = await import("./server/skills/mission.js");
@@ -477,7 +491,15 @@ const leannaCore = new LeannaCore(runtimeV2, {
     }, { ttl: 24 * 60 * 60 * 1000, tags: ["autonomy", task.type] });
   },
 });
-leannaCore.start();
+// Runtime autonome (heartbeat + perception + exécution) : démarré uniquement
+// avec les agents legacy. Hors flag, leannaCore reste instancié (ses getters
+// null-safe servent les routes WS/metrics) mais n'est pas démarré — aucun
+// heartbeat, aucune tâche autonome.
+if (legacyAgentsEnabled) {
+  leannaCore.start();
+} else {
+  console.log(`[Server] ⏭️ Runtime autonome désactivé (LEANNA_ENABLE_LEGACY_AGENTS=false) — heartbeat non démarré.`);
+}
 
 // 1. Activer le runtime agentique sur l'AgentOrchestrator AVANT d'initialiser la flotte
 agentOrchestrator.enableAgenticRuntime(agentic);
@@ -658,12 +680,12 @@ async function startServer() {
   const githubRouter = createGithubRouter(skillManager);
   app.use("/api/git", githubRouter);
   app.use("/api/github", githubRouter);
-  app.use("/api/agents", createAgentsRouter(skillManager));
+  app.use("/api/agents", legacyAgentsOnly, createAgentsRouter(skillManager));
 
   // ─── Routes Runtime V2 (nouveau système, coexistence) ────────────────────
   const { createAgentsRouterV2 } = await import("./server/runtime/routes/agents.js");
   const { createMetricsRouter } = await import("./server/runtime/routes/metrics.js");
-  app.use("/api/v2/agents", createAgentsRouterV2(runtimeV2));
+  app.use("/api/v2/agents", legacyAgentsOnly, createAgentsRouterV2(runtimeV2));
   app.use("/api/v2/metrics", createMetricsRouter(runtimeV2, leannaCore));
 
   // ─── Observability & Telemetry (OpenTelemetry + Cost Dashboard) ──────────
@@ -692,7 +714,9 @@ async function startServer() {
       .then((n: number) => { if (n > 0) console.log(`[SelfRoot] ⏸️ ${n} mission(s) interrompue(s) en attente de décision.`); })
       .catch((e: unknown) => console.warn(`[SelfRoot] ⚠️ Détection des missions interrompues échouée:`, e));
   }));
-  app.use("/api/ftp", createFtpRouter());
+  // FTP = fonctionnalité « IDE multi-projets » héritée : neutralisée (410 Gone)
+  // hors mode legacy-ide (réorientation « voice-first », Phase 2).
+  app.use("/api/ftp", legacyOnly, createFtpRouter());
   app.use("/api/safeguards", safeguardsRouter);
 
   app.use("/api/upload-document", createUploadDocumentRouter(() => currentProfile));
@@ -735,6 +759,7 @@ async function startServer() {
   app.use("/api/env", createEnvRouter());
   app.use("/api/sandbox", createSandboxRouter());
   app.use("/api/checkpoint", createCheckpointRouter());
+  app.use("/api/selfedit", createSelfEditRouter());
   app.use("/api/ide", ideRouter);
   app.use("/api/browser", createBrowserRouter(browserReadPending, browserActionPending));
   app.use("/api/export", createExportRouter());
@@ -938,10 +963,12 @@ async function startServer() {
   });
 
   // ── Mission System: broadcaster d'événements missions vers les clients WebSocket ──
-  // registerDynSkills est asynchrone, on utilise un intervalle pour connecter dès que prêt
-  const missionBroadcasterInterval = setInterval(() => {
+  // registerDynSkills est asynchrone, on utilise un intervalle pour connecter dès que prêt.
+  // Hors agents legacy, missionExecutor n'est jamais initialisé : on n'arme pas
+  // l'intervalle (évite un timer qui tournerait indéfiniment à vide).
+  const missionBroadcasterInterval = !legacyAgentsEnabled ? null : setInterval(() => {
     if (skillManager.missionExecutor) {
-      clearInterval(missionBroadcasterInterval);
+      if (missionBroadcasterInterval) clearInterval(missionBroadcasterInterval);
       const missionExecutor = skillManager.missionExecutor;
       missionExecutor.setEventEmitter((event: string, data: any) => {
         const payload = JSON.stringify({ type: 'mission_event', event, ...data, timestamp: new Date().toISOString() });

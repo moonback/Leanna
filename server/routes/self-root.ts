@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { z } from 'zod';
 import { requestConfirmation } from '../utils/confirmationBridge.js';
 import { broadcastKnowledgeProgress } from '../utils/knowledgeBroadcaster.js';
+import { legacyOnly } from './legacyGuard.js';
 
 export function createSelfRootRouter(
   getWss: () => WebSocketServer | null,
@@ -96,7 +97,8 @@ export function createSelfRootRouter(
   // ── Multi-Workspace Endpoints ───────────────────────────────────────────────
 
   // GET /api/self-root/workspaces — Liste tous les dépôts enregistrés
-  router.get('/workspaces', async (_req: Request, res: Response) => {
+  // Legacy (IDE multi-projets) : 410 Gone hors mode legacy-ide.
+  router.get('/workspaces', legacyOnly, async (_req: Request, res: Response) => {
     try {
       const { listWorkspaces, SELF_ROOT, WORKSPACE_SITE_URL, hasProject } = await import('../utils/selfRoot.js');
       const workspaces = listWorkspaces();
@@ -111,7 +113,7 @@ export function createSelfRootRouter(
   });
 
   // POST /api/self-root/workspaces/validate — Pré-valide un chemin avant ouverture
-  router.post('/workspaces/validate', async (req: Request, res: Response) => {
+  router.post('/workspaces/validate', legacyOnly, async (req: Request, res: Response) => {
     try {
       const Schema = z.object({
         path: z.string().min(1, 'Le chemin est requis.'),
@@ -129,7 +131,7 @@ export function createSelfRootRouter(
   });
 
   // DELETE /api/self-root/workspaces/:id — Supprimer un workspace de l'historique (sans supprimer les fichiers sur disque)
-  router.delete('/workspaces/:id', async (req: Request, res: Response) => {
+  router.delete('/workspaces/:id', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       if (!id) {
@@ -144,7 +146,7 @@ export function createSelfRootRouter(
   });
 
   // PATCH /api/self-root/workspaces/:id — Mettre à jour le nom ou le siteUrl d'un workspace
-  router.patch('/workspaces/:id', async (req: Request, res: Response) => {
+  router.patch('/workspaces/:id', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const Schema = z.object({
@@ -167,7 +169,7 @@ export function createSelfRootRouter(
   });
 
   // POST /api/self-root/change
-  router.post('/change', async (req: Request, res: Response) => {
+  router.post('/change', legacyOnly, async (req: Request, res: Response) => {
     try {
       const ChangeSchema = z.object({
         path: z.string().min(1, 'Le chemin est requis.'),
@@ -269,7 +271,7 @@ export function createSelfRootRouter(
   });
 
   // POST /api/self-root/new — créer un projet vierge et l'activer
-  router.post('/new', async (req: Request, res: Response) => {
+  router.post('/new', legacyOnly, async (req: Request, res: Response) => {
     try {
       const NewProjectSchema = z.object({
         path: z.string().optional(),
@@ -359,7 +361,7 @@ export function createSelfRootRouter(
   // POST /api/self-root/scaffold — Scaffolde un projet React/Next/etc. avec logs
   // Utilise Server-Sent Events (SSE) pour streamer les logs en temps réel.
   // ─────────────────────────────────────────────────────────────────────────────
-  router.post('/scaffold', async (req: Request, res: Response) => {
+  router.post('/scaffold', legacyOnly, async (req: Request, res: Response) => {
     type Framework = 'react-vite' | 'react-vite-js' | 'next' | 'react-router';
     interface FwConfig { bin: string; args: (n: string) => string[]; label: string; }
 
@@ -569,7 +571,7 @@ export function createSelfRootRouter(
   // Events: { type: 'log', level, message } | { type: 'progress', phase, percent? }
   //       | { type: 'done', status: 'success', newRoot } | { type: 'error', error }
   // ─────────────────────────────────────────────────────────────────────────────
-  router.post('/clone', async (req: Request, res: Response) => {
+  router.post('/clone', legacyOnly, async (req: Request, res: Response) => {
     const { spawn } = await import('child_process');
     const fsModule   = await import('fs');
     const pathModule = await import('path');

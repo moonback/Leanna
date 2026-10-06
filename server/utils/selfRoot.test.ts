@@ -17,6 +17,13 @@ import {
   updateWorkspaceMeta,
 } from './selfRoot.js';
 
+// Ces tests couvrent le comportement legacy multi-workspace de setSelfRoot
+// (chemins arbitraires). On neutralise LEANNA_PRODUCT_MODE pour que le verrou
+// « voice-first » (qui n'accepte que Leanna_APP_ROOT) ne s'engage pas, et pour
+// être immunisé contre une fuite d'environnement d'un autre fichier de test
+// exécuté dans le même processus (node --test en glob).
+delete process.env.LEANNA_PRODUCT_MODE;
+
 // Ensure SELF_ROOT is initialised — needed in test environments where no
 // project has been persisted yet. Walk up from server/utils/ to project root.
 {

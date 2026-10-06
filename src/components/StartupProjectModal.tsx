@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ideApi } from '../services/ideApi.js';
 import { useToast } from '../components/ui/Toast.js';
+import { isAssistantProductMode } from '../config/productMode.js';
 // @ts-ignore - Asset handled by bundler
 import logo from '../../assets/images/logo.png';
 
@@ -55,6 +56,12 @@ function formatDate(isoString: string): string {
 export function StartupProjectModal() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+
+  // ── Réorientation « voice-first » (Phase 3) ──────────────────────────────
+  // En mode assistant (défaut), le sélecteur de workspace multi-projets est
+  // inutile : Leanna ne gère que son propre code source via l'Atelier.
+  const isAssistantMode = isAssistantProductMode();
+
   const [isOpen, setIsOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
@@ -548,6 +555,9 @@ export function StartupProjectModal() {
   };
 
   const canBrowse = !!getElectronAPI() || typeof (window as any).showDirectoryPicker === 'function';
+
+  // ── Mode assistant : masquer la modale de workspace (Phase 3) ──────────
+  if (isAssistantMode) return null;
 
   if (!isOpen) return null;
 
