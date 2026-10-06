@@ -229,7 +229,7 @@ export const UnifiedSidebar = memo(function UnifiedSidebar(props: UnifiedSidebar
         aria-label="Navigation principale"
       >
         {/* ═══ BRAND LOGO ═══ */}
-        <BrandLogo theme={theme} onNavigate={() => { navigate('/ide'); setMobileOpen(false); }} />
+        <BrandLogo theme={theme} onNavigate={() => { navigate('/'); setMobileOpen(false); }} />
         <NoWorkspaceBadge />
 
       {/* ═══ IDE TOOLS ═══ */}

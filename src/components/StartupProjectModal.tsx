@@ -55,6 +55,17 @@ function formatDate(isoString: string): string {
 export function StartupProjectModal() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+
+  // ── Réorientation « voice-first » (Phase 3) ──────────────────────────────
+  // En mode assistant, le sélecteur de workspace multi-projets est inutile :
+  // Leanna ne gère que son propre code source via l'Atelier. On désactive la
+  // modale pour ne pas interrompre l'accueil vocal.
+  const productMode = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_LEANNA_PRODUCT_MODE?.trim().toLowerCase();
+  const isAssistantMode = productMode === 'assistant';
+  // On masque aussi la modale quand l'utilisateur est sur l'accueil assistant (/)
+  // et qu'aucun mode n'est explicitement configuré (comportement par défaut).
+  const onAssistantHome = pathname === '/';
+
   const [isOpen, setIsOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
@@ -550,6 +561,9 @@ export function StartupProjectModal() {
   const canBrowse = !!getElectronAPI() || typeof (window as any).showDirectoryPicker === 'function';
 
   if (!isOpen) return null;
+
+  // ── Mode assistant : masquer la modale de workspace (Phase 3) ──────────
+  if (isAssistantMode || onAssistantHome) return null;
 
   const cardMotionProps = shouldReduceMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }

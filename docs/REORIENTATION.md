@@ -45,7 +45,7 @@ invalide.
 | 0 | Préparation (baseline git, tests de référence, flags, docs) | ✅ Terminée |
 | 1 | Séparation des profils d'outils (assistant / atelier / legacy) | ✅ Terminée |
 | 2 | Verrouillage de `SELF_ROOT` sur l'application | ✅ Terminée |
-| 3 | Nouvelle interface : accueil vocal + Atelier | 📋 Planifié |
+| 3 | Nouvelle interface : accueil vocal + Atelier | ✅ Terminée |
 | 4 | Recherche web optimisée pour la voix | 📋 Planifié |
 | 5 | Prompts et expérience vocale | 📋 Planifié |
 | 6 | Atelier : auto-modification sûre | 📋 Planifié |
@@ -142,3 +142,26 @@ posé ; en son absence (typiquement en test), le comportement reste inchangé.
   mémoires Supabase écrites sous l'ancien `project_id` (les mémoires globales
   `project_id=''` restent visibles). Prévoir un script de migration ou un ID
   stable indépendant du chemin (hors périmètre Phase 2).
+
+### Phase 3 — Nouvelle interface : accueil vocal + Atelier
+
+- **Nouvelle vue `src/views/AssistantView.tsx`** : grande orbe centrale animée
+  (réactive à l'amplitude audio via `useOrbState`), icône de micro dynamique
+  (connecté/muet/idle), label de statut, bouton push-to-talk, transcript en
+  direct via `useLiveAPIContext`, barre de navigation rapide (Mémoires,
+  Historique, Listes, Automatisations), bouton Atelier + Paramètres en header.
+- **Routes recâblées** (`src/main.tsx` → `AnimatedRoutes`) :
+  - `/` → `AssistantView` (au lieu de `Navigate to="/ide"`).
+  - `/atelier` → `IdeView` (nouvelle route).
+  - `/ide` → redirige vers `/atelier` (rétrocompat).
+- **`IdeNavigationBridge`** adapté : `open-ide` navigue vers `/atelier` (pas
+  `/ide`), et ne s'active pas depuis `/` (assistant home).
+- **`FloatingOrbWrapper`** : masqué sur `/`, `/atelier` et `/ide` (chacun a sa
+  propre gestion de l'orbe/ChatPanel).
+- **`NavSidebar`** : masquée sur `/`, `/atelier`, `/ide` et `/settings`.
+- **`StartupProjectModal`** : masquée en mode assistant (`VITE_LEANNA_PRODUCT_MODE=
+  assistant`) et quand l'utilisateur est sur l'accueil vocal (`/`).
+- **`UnifiedSidebar`** : le BrandLogo navigue vers `/` (accueil vocal) au lieu
+  de `/ide`.
+- **Régression (2026-10-06)** : front **27/27** (vitest), backend spot-check
+  **36/36** (tous tests Phase 0-2). Typecheck vert.

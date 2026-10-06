@@ -32,6 +32,7 @@ const DocumentsView = lazy(() => import('./views/DocumentsView.js'));
 const NotebooksView = lazy(() => import('./views/NotebooksView.js'));
 const ObservabilityView = lazy(() => import('./views/ObservabilityView.js'));
 const AutonomyView = lazy(() => import('./views/AutonomyView.js'));
+const AssistantView = lazy(() => import('./views/AssistantView.js'));
 // Typographie : Arial (police système) — aucun fichier de police à charger.
 import './index.css';
 
@@ -241,18 +242,18 @@ function IdeNavigationBridge() {
       if (!detail || typeof detail !== 'object') return;
 
       if (detail.type === 'open-ide') {
-        // Auto-open IDE only from secondary pages (not orb home or ide)
+        // Auto-open Atelier only from secondary pages (not assistant home or atelier)
         // Also skip if user just navigated away (cooldown)
         if (Date.now() < ignoreUntil) return;
-        if (location.pathname !== '/' && location.pathname !== '/ide') {
-          navigate('/ide');
+        if (location.pathname !== '/' && location.pathname !== '/atelier' && location.pathname !== '/ide') {
+          navigate('/atelier');
         }
       }
 
       if (detail.type === 'open-file') {
-        // Explicit file open: always navigate to IDE
-        if (location.pathname !== '/ide') {
-          navigate('/ide');
+        // Explicit file open: always navigate to Atelier
+        if (location.pathname !== '/atelier' && location.pathname !== '/ide') {
+          navigate('/atelier');
         }
         if (typeof detail.path === 'string') {
           sessionStorage.setItem('Leanna-ide-pending-file', JSON.stringify({
@@ -270,8 +271,8 @@ function IdeNavigationBridge() {
 
       // File was modified on disk by the assistant — reload it in the editor
       if (detail.type === 'file-changed' && typeof detail.path === 'string') {
-        if (location.pathname !== '/' && location.pathname !== '/ide') {
-          navigate('/ide');
+        if (location.pathname !== '/' && location.pathname !== '/atelier' && location.pathname !== '/ide') {
+          navigate('/atelier');
         }
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('Leanna-ide-file-changed', {
@@ -449,18 +450,17 @@ function LoadingFallback() {
 
 function FloatingOrbWrapper() {
   const { pathname } = useLocation();
-  // Hide on IDE views — the ChatPanel replaces it there
-  if (pathname === '/' || pathname === '/ide') return null;
+  // Hide on assistant home (has its own orb) and atelier/IDE (ChatPanel replaces it)
+  if (pathname === '/' || pathname === '/atelier' || pathname === '/ide') return null;
   return <FloatingOrb />;
 }
 function NavSidebar() {
   const { pathname } = useLocation();
-  const isIde = pathname === '/' || pathname === '/ide';
+  const isIdeOrAtelier = pathname === '/' || pathname === '/ide' || pathname === '/atelier';
   const isSettings = pathname === '/settings';
 
-  // Don't show on IDE (it has its own UnifiedSidebar in context='ide')
-  // Don't show on Settings (SettingsView has its own left nav)
-  if (isIde || isSettings) return null;
+  // Don't show on assistant home, IDE/Atelier (they have their own layout), or Settings
+  if (isIdeOrAtelier || isSettings) return null;
   return <UnifiedSidebar context="global" />;
 }
 
@@ -485,8 +485,9 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/"              element={<Navigate to="/ide" replace />} />
-        <Route path="/ide"           element={wrap(<IdeView />)} />
+        <Route path="/"              element={wrap(<AssistantView />)} />
+        <Route path="/ide"           element={<Navigate to="/atelier" replace />} />
+        <Route path="/atelier"       element={wrap(<IdeView />)} />
         <Route path="/memories"      element={wrap(<MemoriesView />)} />
         <Route path="/history"       element={wrap(<HistoryView />)} />
         <Route path="/settings"      element={wrap(<SettingsView />)} />
