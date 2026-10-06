@@ -50,7 +50,7 @@ invalide.
 | 5 | Prompts et expérience vocale | ✅ Terminée |
 | 6 | Atelier : auto-modification sûre | 🟡 Partielle (voir note git) |
 | 7 | Rétrécissement du périmètre (legacy derrière flags) | ✅ Terminée |
-| 8 | Tests, doc, packaging | 📋 Planifié |
+| 8 | Tests, doc, packaging | ✅ Terminée |
 
 ## Journal
 
@@ -335,3 +335,56 @@ démarrage) et masquage UI des vues legacy (Notebooks/Documents/Observability/
 Autonomy derrière « Avancé »). Ces éléments relèvent d'un travail UI/bootstrap
 plus profond ; la désactivation du **runtime autonome** (la partie coûteuse et
 à risque) est, elle, effective.
+
+### Phase 8 — Tests, doc, packaging
+
+- **Test d'intégration du contrat de sécurité** : `server/reorientation.e2e.test.ts`
+  (7 cas) assemble en un contrat lisible les invariants des phases 1/2/6/7 :
+  l'assistant n'a aucun outil d'écriture/code/agent ; l'Atelier exige un jeton à
+  usage unique (anti-rejeu) ; une session ayant lu du web ne peut plus écrire ;
+  pas de jeton si l'auto-édition est désactivée (403) ; profil assistant par
+  défaut.
+- **Documentation produit** : bannière « Réorientation voice-first » dans
+  `README.md` et avertissement en tête de `SELF_IDE.md`, tous deux pointant vers
+  ce document (source faisant autorité).
+- **Packaging Electron** (`electron/main.cjs`) : ajout d'un
+  `setPermissionRequestHandler` + `setPermissionCheckHandler` sur la session du
+  renderer accordant `media`/`audioCapture`/`videoCapture`/`display-capture` —
+  indispensable pour que `getUserMedia(microphone)` de l'assistant vocal
+  fonctionne (notamment sous Windows). `askForMediaAccess` macOS déjà présent,
+  conservé.
+- **`.env.example`** : documentation de `VITE_LEANNA_PRODUCT_MODE` (miroir front).
+- **Régression finale (2026-10-06)** : backend **958 tests, 955 réussis, 3
+  échecs** (uniquement les 3 `graphify`, binaire externe absent) ; front
+  **27/27**. Typecheck vert.
+  - Note : un flake de timing `DistributedLock.test.ts` apparaît par
+    intermittence selon la charge du processus de test ; il passe en isolation
+    et est sans lien avec la réorientation. Un run propre (après nettoyage des
+    processus orphelins du smoke test) donne 955/958.
+
+---
+
+## Récapitulatif global
+
+| Phase | Intitulé | État | Tests ajoutés |
+| --- | --- | --- | --- |
+| 0 | Préparation (baseline, flags, docs) | ✅ | +6 |
+| 1 | Profils d'outils (assistant/atelier/legacy) | ✅ | +9 |
+| 2 | Verrouillage `SELF_ROOT` | ✅ | +17 |
+| 3 | Interface : accueil vocal + Atelier | ✅ | (front) |
+| 4 | Recherche web vocale (grounding) | ✅ | +7 |
+| 5 | Prompts et expérience vocale | ✅ | +3 |
+| 6 | Atelier sûr (verrou web↔code, jeton) | 🟡 partielle (git off) | +12 |
+| 7 | Rétrécissement du périmètre (legacy off) | ✅ | +3 |
+| 8 | Tests, doc, packaging | ✅ | +7 |
+
+**Invariant central livré et testé** : en mode assistant (défaut), aucun outil
+d'écriture de code n'est déclaré ni exécutable ; l'Atelier n'est accessible que
+via un jeton à usage unique ; une session ayant lu du web ne peut pas modifier
+le code. Le serveur démarre proprement avec les agents legacy désactivés
+(vérifié par smoke test + healthcheck 200).
+
+**Limite assumée** : le rollback automatisé par git (Watchdog) n'est pas
+livré car git est désactivé dans le projet ; la réversibilité repose sur le
+sandbox transactionnel existant. Un rollback adossé au sandbox serait le
+prolongement naturel de la Phase 6.
