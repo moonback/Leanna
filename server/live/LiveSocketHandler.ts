@@ -26,6 +26,12 @@ import { knowledgeGraph, projectMemory, understandingEngine } from '../knowledge
 import { Supervisor } from '../autonomy/index.js';
 import { WORKSPACE_SITE_URL, SELF_ROOT } from '../utils/selfRoot.js';
 import type { BrowserPendingEntry, BrowserActionPendingEntry } from '../routes/browser.js';
+import {
+  type SessionProfile,
+  resolveSessionProfile,
+  isToolAllowedForProfile,
+} from './toolProfiles.js';
+import { getProductConfig } from '../config/environment.js';
 
 // Type compatible avec l'ancien SkillManager pour une migration progressive
 type SkillManager = SkillManagerV2;
@@ -396,6 +402,21 @@ export function attachLiveWebSocket(
       const initialQuery = urlParams.get('q') || urlParams.get('query') || '';
       const declarations = skillManager.getToolDeclarations(requestedSkills);
 
+      // ── Profil de session (réorientation « voice-first », Phase 1) ────
+      // Sépare l'assistant vocal (aucun outil code/agent) de l'Atelier
+      // (auto-modification). Le passage à l'Atelier par simple paramètre reste
+      // refusé hors mode legacy-ide ; le jeton Atelier à usage unique arrive en
+      // Phase 6 (TODO: brancher ?atelier_token= ici).
+      const productConfig = getProductConfig();
+      const sessionProfile: SessionProfile = resolveSessionProfile({
+        profileParam: urlParams.get('profile'),
+        legacyMode: urlParams.get('mode'),
+        productMode: productConfig.productMode,
+        // TODO (Phase 6) : valider un jeton Atelier à usage unique émis par l'UI.
+        atelierTokenValid: false,
+      });
+      const legacyAgentsEnabled = productConfig.legacyAgentsEnabled;
+
       // ── Tool tier filtering ──────────────────────────────────────────
       const TIER1_CORE_TOOLS = new Set([
         'read_file_outline', 'read_project_file', 'list_project_files',
@@ -533,6 +554,37 @@ export function attachLiveWebSocket(
         filteredDeclarations = filteredDeclarations.filter(d => (d as any)._mcpServerId || !d.name.startsWith('reasoning_'));
       }
 
+      // ── Filtrage par profil de session (Phase 1) ────────────────────
+      // Garantit qu'un assistant vocal n'a AUCUN outil de code/commande/agent
+      // DÉCLARÉ à Gemini. Les outils MCP et custom restent autorisés via le
+      // helper pur `isToolAllowedForProfile`. Le profil Atelier conserve ses
+      // outils de code ; les agents legacy ne passent que si le flag est actif.
+      const beforeProfileFilter = filteredDeclarations.length;
+      filteredDeclarations = filteredDeclarations.filter((d: any) =>
+        isToolAllowedForProfile(sessionProfile, d.name, {
+          isMcp: !!d._mcpServerId,
+          isCustom: typeof d.name === 'string' && d.name.startsWith('custom_'),
+          legacyAgentsEnabled,
+        }),
+      );
+      // En profil assistant, le méta-outil `request_tools` ne doit pas pouvoir
+      // charger de catégories de code/agent (ex. selfImprovement). On le retire.
+      if (sessionProfile === 'assistant') {
+        filteredDeclarations = filteredDeclarations.filter((d: any) => d.name !== 'request_tools');
+      }
+      if (filteredDeclarations.length !== beforeProfileFilter) {
+        console.log(
+          `[ToolProfiles] 🎚️ Profil "${sessionProfile}" : ${filteredDeclarations.length}/${beforeProfileFilter} outils conservés après filtrage par profil.`,
+        );
+      }
+
+      // Noms des outils MCP effectivement exposés : la garde d'exécution par
+      // profil s'en sert pour reconnaître un outil MCP (dont le nom ne suit
+      // aucune convention de préfixe) et l'autoriser côté assistant.
+      const sessionMcpToolNames = new Set<string>(
+        filteredDeclarations.filter((d: any) => d._mcpServerId).map((d: any) => d.name),
+      );
+
       // Retire les marqueurs internes (_mcpServerId) : l'API Gemini n'accepte
       // que name/description/parameters dans une functionDeclaration.
       const cleanDeclarations = filteredDeclarations.map((d: any) => {
@@ -544,7 +596,7 @@ export function attachLiveWebSocket(
       const toolTokensEstimate = filteredDeclarations.reduce((sum, d) => sum + estimateToolTokens(d), 0);
       const tokensEconomises = estimateToolTokensTotal(skillManager.getToolDeclarations()) - toolTokensEstimate;
 
-      console.log(`[TokenOptimizer] 🔧 Outils chargés: ${filteredDeclarations.length}/${declarations.length} (mode: ${sessionMode}, agents: ${agentsEnabled ? 'ON' : 'OFF'}, git: OFF)`);
+      console.log(`[TokenOptimizer] 🔧 Outils chargés: ${filteredDeclarations.length}/${declarations.length} (profil: ${sessionProfile}, mode: ${sessionMode}, agents: ${agentsEnabled ? 'ON' : 'OFF'}, git: OFF)`);
       console.log(`[TokenOptimizer]    Tokens outils estimés: ~${toolTokensEstimate} (économie: ~${tokensEconomises} tokens)`);
 
       // ── Build system instruction ─────────────────────────────────────
@@ -836,6 +888,7 @@ export function attachLiveWebSocket(
                     autoSummarizeContext?.();
                   }
                 },
+                { sessionProfile, legacyAgentsEnabled, mcpToolNames: sessionMcpToolNames },
               ).catch(e =>
                 console.error('[handleToolCall] Erreur non catchée:', e),
               );
@@ -1419,9 +1472,17 @@ async function handleToolCall(
   },
   failTracker?: Map<string, number>,
   onToolResultTokens?: (tokens: number) => void,
+  guardOptions: {
+    sessionProfile?: SessionProfile;
+    legacyAgentsEnabled?: boolean;
+    mcpToolNames?: ReadonlySet<string>;
+  } = {},
 ): Promise<void> {
   const functionResponses: any[] = [];
   const skillManager = deps?.skillManager;
+  const sessionProfile: SessionProfile = guardOptions.sessionProfile ?? 'assistant';
+  const legacyAgentsEnabled = guardOptions.legacyAgentsEnabled ?? false;
+  const mcpToolNames = guardOptions.mcpToolNames ?? new Set<string>();
   const browserReadPending = deps?.browserReadPending;
   const browserActionPending = deps?.browserActionPending;
   const currentProfile = deps?.getCurrentProfile?.() ?? {};
@@ -1482,6 +1543,35 @@ async function handleToolCall(
         });
         clientWs.send(JSON.stringify({ tool_used: call.name, info: `[COURT-CIRCUIT — ${REPEATED_FAILURE_LIMIT} échecs identiques]` }));
         continue;
+      }
+
+      // ── Refus à l'EXÉCUTION par profil de session (Phase 1) ──────────────
+      // Le chemin Live court-circuite PermissionPolicy quand un contexte est
+      // fourni ; le filtrage à la déclaration ne suffit donc pas. Cette garde
+      // refuse tout outil non autorisé pour le profil, même s'il a été appelé
+      // malgré son absence des functionDeclarations. `request_tools` est un
+      // méta-outil d'infrastructure (sa propre logique valide les catégories).
+      if (call.name !== 'request_tools') {
+        const isMcpTool = mcpToolNames.has(call.name);
+        if (!isToolAllowedForProfile(sessionProfile, call.name, {
+          isMcp: isMcpTool,
+          isCustom: typeof call.name === 'string' && call.name.startsWith('custom_'),
+          legacyAgentsEnabled,
+        })) {
+          functionResponses.push({
+            id: call.id,
+            name: call.name,
+            response: {
+              error: `[PROFIL] L'outil "${call.name}" n'est pas disponible dans le profil "${sessionProfile}". ` +
+                (sessionProfile === 'assistant'
+                  ? `L'assistant vocal n'a pas accès aux outils de code/commande/agent. Pour modifier le code de Leanna, ouvre l'Atelier.`
+                  : `Cet outil n'est pas exposé à l'Atelier.`),
+              blockedByProfile: true,
+            },
+          });
+          clientWs.send(JSON.stringify({ tool_used: call.name, info: `[BLOQUÉ — profil ${sessionProfile}]` }));
+          continue;
+        }
       }
 
       // ── Garde de démarrage (anti-race condition) ─────────────────────────
