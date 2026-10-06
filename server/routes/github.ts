@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { SkillManagerV2 } from '../runtime/compat/SkillManagerV2.js';
 import { SELF_ROOT } from '../utils/selfRoot.js';
+import { legacyOnly } from './legacyGuard.js';
 
 // Type compatible avec l'ancien SkillManager pour une migration progressive
 type SkillManager = SkillManagerV2;
@@ -22,8 +23,8 @@ export function createGithubRouter(skillManager: SkillManager): Router {
 
   const workspaceGitPaths = ['.', ':(exclude).Leanna', ':(exclude).Leanna/**'];
 
-  // GET /api/github/repos
-  router.get('/repos', async (req: Request, res: Response) => {
+  // GET /api/github/repos — accès GitHub externe : legacy (410 hors legacy-ide)
+  router.get('/repos', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { username, sort, limit, visibility } = req.query as {
         username?: string;
@@ -45,7 +46,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/user
-  router.get('/user', async (req: Request, res: Response) => {
+  router.get('/user', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { username } = req.query as { username?: string };
       const result = await skillManager.handleToolCall('get_github_user', { username });
@@ -57,7 +58,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/repo-info
-  router.get('/repo-info', async (req: Request, res: Response) => {
+  router.get('/repo-info', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { owner, repo } = req.query as { owner?: string; repo?: string };
       if (!owner || !repo) return res.status(400).json({ error: 'owner et repo sont requis.' });
@@ -70,7 +71,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/issues
-  router.get('/issues', async (req: Request, res: Response) => {
+  router.get('/issues', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { owner, repo, state } = req.query as { owner?: string; repo?: string; state?: string };
       if (!owner || !repo) return res.status(400).json({ error: 'owner et repo sont requis.' });
@@ -83,7 +84,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/pulls
-  router.get('/pulls', async (req: Request, res: Response) => {
+  router.get('/pulls', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { owner, repo, state } = req.query as { owner?: string; repo?: string; state?: string };
       if (!owner || !repo) return res.status(400).json({ error: 'owner et repo sont requis.' });
@@ -96,7 +97,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/notifications
-  router.get('/notifications', async (_req: Request, res: Response) => {
+  router.get('/notifications', legacyOnly, async (_req: Request, res: Response) => {
     try {
       const result = await skillManager.handleToolCall('get_github_notifications', {});
       if (result?.error) return res.status(200).json(result);
@@ -107,7 +108,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
   });
 
   // GET /api/github/search
-  router.get('/search', async (req: Request, res: Response) => {
+  router.get('/search', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { query } = req.query as { query?: string };
       if (!query) return res.status(400).json({ error: 'query est requis.' });
@@ -159,7 +160,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
 
   // POST /api/github/ingest-repository
   // Ingestion complète d'un dépôt GitHub public dans un notebook
-  router.post('/ingest-repository', async (req: Request, res: Response) => {
+  router.post('/ingest-repository', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { owner, repo, notebook_id, branch, max_files, file_extensions } = req.body as {
         owner?: string;
@@ -225,7 +226,7 @@ export function createGithubRouter(skillManager: SkillManager): Router {
 
   // GET /api/github/repo-files
   // Lister les fichiers d'un dépôt GitHub
-  router.get('/repo-files', async (req: Request, res: Response) => {
+  router.get('/repo-files', legacyOnly, async (req: Request, res: Response) => {
     try {
       const { owner, repo, ref, max_files, file_extensions } = req.query as {
         owner?: string;

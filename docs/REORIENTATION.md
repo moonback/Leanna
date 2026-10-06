@@ -44,7 +44,7 @@ invalide.
 | --- | --- | --- |
 | 0 | Préparation (baseline git, tests de référence, flags, docs) | ✅ Terminée |
 | 1 | Séparation des profils d'outils (assistant / atelier / legacy) | ✅ Terminée |
-| 2 | Verrouillage de `SELF_ROOT` sur l'application | 📋 Planifié |
+| 2 | Verrouillage de `SELF_ROOT` sur l'application | ✅ Terminée |
 | 3 | Nouvelle interface : accueil vocal + Atelier | 📋 Planifié |
 | 4 | Recherche web optimisée pour la voix | 📋 Planifié |
 | 5 | Prompts et expérience vocale | 📋 Planifié |
@@ -102,3 +102,43 @@ invalide.
 - **Régression (2026-10-06)** : backend **909 tests, 906 réussis, 3 échecs**
   (toujours les 3 `graphify`), soit +9 tests et aucune régression. Typecheck
   vert.
+
+### Phase 2 — Verrouillage de `SELF_ROOT` sur l'application
+
+Approche **non destructive** (règle n°5 : masquer derrière un flag avant de
+supprimer). Le verrou n'est actif que si `LEANNA_PRODUCT_MODE` est explicitement
+posé ; en son absence (typiquement en test), le comportement reste inchangé.
+
+- **`server/utils/selfRoot.ts`** :
+  - `FORBIDDEN_WRITE_TARGETS` enrichi : `.git` (dossier entier), `node_modules`,
+    `.gemini-keys.json`, `.Leanna` (état interne), `release`, `dist`. Les
+    variantes `.env*` (`.env`, `.env.test`, `.env.example`, `.env.local`…) sont
+    bloquées par une règle dédiée dans `isWriteForbidden`.
+  - `setSelfRoot` durci : hors `legacy-ide`, seul `Leanna_APP_ROOT` est accepté ;
+    tout chemin externe est refusé et journalisé via `appendAuditEvent`
+    (`.Leanna-audit.log` ancré sur `Leanna_APP_ROOT`, import dynamique pour
+    éviter un cycle). `normalizeSelfPath`, `resolveRealPathWithinSelf`,
+    `auditSymlinks`, `isCriticalFile` restent inchangés.
+- **`server/routes/legacyGuard.ts`** (nouveau) : `isLegacyIdeMode()` et le
+  middleware `legacyOnly` qui répond `410 Gone` (`code: LEGACY_FEATURE_GONE`)
+  hors `legacy-ide`.
+- **Routes neutralisées (410 hors legacy-ide)** :
+  - `/api/ftp/*` (tout le routeur FTP) ;
+  - `/api/self-root` : `GET/POST /workspaces*`, `/change`, `/new`, `/scaffold`,
+    `/clone` (les routes `GET /status` et `POST /clear` restent disponibles) ;
+  - `/api/github` : `repos`, `user`, `repo-info`, `issues`, `pulls`,
+    `notifications`, `search`, `ingest-repository`, `repo-files` (les
+    opérations git **locales** `status`/`commit`/`push`/`commits` restent
+    disponibles pour l'Atelier).
+- **Tests** : `server/routes/legacyGuard.test.ts` (6 cas) et
+  `server/utils/selfRootPhase2.test.ts` (11 cas). Les tests existants de
+  `selfRoot` restent verts (ils tournent sans `LEANNA_PRODUCT_MODE`).
+- **Régression (2026-10-06)** : backend **926 tests, 923 réussis, 3 échecs**
+  (toujours les 3 `graphify`), soit +17 tests et aucune régression. Typecheck
+  et typecheck:test verts.
+- **Point à suivre [À VÉRIFIER]** : `getActiveProjectId()` devient constant une
+  fois `SELF_ROOT` figé sur `Leanna_APP_ROOT`, mais dépend du chemin
+  d'installation. Un déplacement de l'app changerait l'ID et masquerait les
+  mémoires Supabase écrites sous l'ancien `project_id` (les mémoires globales
+  `project_id=''` restent visibles). Prévoir un script de migration ou un ID
+  stable indépendant du chemin (hors périmètre Phase 2).

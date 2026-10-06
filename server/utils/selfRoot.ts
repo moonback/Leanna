@@ -485,6 +485,55 @@ export function initSelfRoot(): void {
 }
 
 /**
+ * Détermine si un changement de SELF_ROOT vers `resolved` est autorisé.
+ *
+ * Autorisé si :
+ *   - mode `legacy-ide` (ancien comportement IDE multi-projets), OU
+ *   - un override explicite est posé (`Leanna_SELF_ROOT_OVERRIDE`, tests/CI), OU
+ *   - la cible EST l'application Leanna elle-même (`Leanna_APP_ROOT`).
+ * Refusé sinon (mode assistant pointant un projet externe).
+ */
+function isSelfRootChangeAllowed(resolved: string): boolean {
+  // Mode legacy-ide : ancien comportement IDE multi-projets, aucune restriction.
+  const rawMode = process.env.LEANNA_PRODUCT_MODE?.trim().toLowerCase();
+  if (rawMode === "legacy-ide") return true;
+  // Le verrou ne s'active que si le flag est EXPLICITEMENT posé (production) ou
+  // est "assistant". En l'absence de variable (typiquement en test), on ne
+  // bloque pas — cela évite de casser les harnais existants qui ciblent des
+  // dossiers temporaires. La valeur par défaut "assistant" de getProductConfig()
+  // ne suffit pas à engager le verrou : l'utilisateur doit le confirmer dans son
+  // .env ou l'absence de .env en production le rend effectif via dotenv.
+  if (!rawMode) return true;
+  // Override explicite (tests/CI) — la variable est documentée « dev uniquement ».
+  if (process.env.Leanna_SELF_ROOT_OVERRIDE?.trim()) return true;
+  return (
+    resolved === Leanna_APP_ROOT ||
+    resolved.toLowerCase() === Leanna_APP_ROOT.toLowerCase()
+  );
+}
+
+/**
+ * Journalise (best-effort, fire-and-forget) un refus de changement de
+ * SELF_ROOT. Le chemin du journal est ancré sur Leanna_APP_ROOT (et non
+ * SELF_ROOT, qui peut être vide) pour une trace fiable. L'import est dynamique
+ * afin d'éviter un cycle d'import avec audit.ts.
+ */
+function logSelfRootRejection(attempted: string): void {
+  const logPath = path.join(Leanna_APP_ROOT, ".Leanna-audit.log");
+  void import("../audit.js")
+    .then(({ appendAuditEvent }) =>
+      appendAuditEvent({
+        action: "self_root.change.rejected",
+        target: attempted,
+        actor: "selfRoot",
+        details: `Verrou voice-first : seul ${Leanna_APP_ROOT} est autorisé en mode assistant.`,
+        logPath,
+      }),
+    )
+    .catch(() => { /* best-effort : ne jamais faire échouer le refus */ });
+}
+
+/**
  * Change la racine du workspace à chaud.
  * Valide que le chemin existe et contient du code source.
  * siteUrl est optionnel — s'il est undefined, la valeur existante est conservée.
@@ -493,6 +542,21 @@ export function initSelfRoot(): void {
  */
 export function setSelfRoot(newPath: string, siteUrl?: string, customName?: string): string {
   const resolved = path.resolve(newPath);
+
+  // ── Verrou « voice-first » (Phase 2) ────────────────────────────────────
+  // Hors mode legacy-ide, Leanna ne gère que son propre code source : SELF_ROOT
+  // est verrouillé sur Leanna_APP_ROOT. Toute tentative de pointer un autre
+  // dossier est refusée et journalisée. L'override explicite (tests/CI) reste
+  // respecté pour ne pas casser les harnais de test.
+  if (!isSelfRootChangeAllowed(resolved)) {
+    logSelfRootRejection(resolved);
+    throw new Error(
+      `SELF_ROOT verrouillé sur l'application Leanna (${Leanna_APP_ROOT}). ` +
+      `L'ouverture d'un projet externe (${resolved}) est désactivée dans le mode assistant. ` +
+      `Définissez LEANNA_PRODUCT_MODE=legacy-ide pour l'ancien comportement IDE multi-projets.`,
+    );
+  }
+
   if (isProhibitedSystemPath(resolved)) {
     throw new Error(`Chemin interdit (racine ou répertoire système) : ${resolved}`);
   }
@@ -562,11 +626,23 @@ export const CRITICAL_FILES: readonly string[] = [
 /**
  * Fichiers/dossiers totalement interdits en écriture/suppression,
  * même avec confirmation utilisateur.
+ *
+ * Durci lors de la réorientation « voice-first » (Phase 2) : l'Atelier
+ * (auto-modification) ne doit jamais pouvoir toucher le dépôt git, les
+ * dépendances, les secrets, l'état interne de Leanna ni les artefacts de build.
+ * Les variantes `.env*` (`.env`, `.env.test`, `.env.example`…) sont traitées à
+ * part dans `isWriteForbidden` car un simple préfixe de dossier ne les couvre
+ * pas.
  */
 export const FORBIDDEN_WRITE_TARGETS: readonly string[] = [
+  ".git",
   ".git/config",
   ".git/HEAD",
   "node_modules",
+  ".gemini-keys.json",
+  ".Leanna",
+  "release",
+  "dist",
 ];
 
 // ── Validation de chemin ─────────────────────────────────────────────────────
@@ -602,6 +678,13 @@ export function isWriteForbidden(absolutePath: string): boolean {
     (pattern) => relative === pattern || relative.startsWith(pattern + "/")
   );
   if (hardForbidden) return true;
+
+  // 1b. Fichiers d'environnement à la racine : `.env`, `.env.local`,
+  //     `.env.test`, `.env.example`, etc. Interdits en écriture (secrets).
+  //     Un simple préfixe de dossier ne les couvre pas (`.env.test` ≠ `.env/`).
+  if (relative === ".env" || relative.startsWith(".env.")) {
+    return true;
+  }
 
   // 2. Liste d'exclusion utilisateur (.leannaignore à la racine du projet).
   //    Les dossiers/motifs listés sont interdits en écriture à l'agent.
