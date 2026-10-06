@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ideApi } from '../services/ideApi.js';
 import { useToast } from '../components/ui/Toast.js';
+import { isAssistantProductMode } from '../config/productMode.js';
 // @ts-ignore - Asset handled by bundler
 import logo from '../../assets/images/logo.png';
 
@@ -57,14 +58,9 @@ export function StartupProjectModal() {
   const navigate = useNavigate();
 
   // ── Réorientation « voice-first » (Phase 3) ──────────────────────────────
-  // En mode assistant, le sélecteur de workspace multi-projets est inutile :
-  // Leanna ne gère que son propre code source via l'Atelier. On désactive la
-  // modale pour ne pas interrompre l'accueil vocal.
-  const productMode = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_LEANNA_PRODUCT_MODE?.trim().toLowerCase();
-  const isAssistantMode = productMode === 'assistant';
-  // On masque aussi la modale quand l'utilisateur est sur l'accueil assistant (/)
-  // et qu'aucun mode n'est explicitement configuré (comportement par défaut).
-  const onAssistantHome = pathname === '/';
+  // En mode assistant (défaut), le sélecteur de workspace multi-projets est
+  // inutile : Leanna ne gère que son propre code source via l'Atelier.
+  const isAssistantMode = isAssistantProductMode();
 
   const [isOpen, setIsOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
@@ -560,10 +556,10 @@ export function StartupProjectModal() {
 
   const canBrowse = !!getElectronAPI() || typeof (window as any).showDirectoryPicker === 'function';
 
-  if (!isOpen) return null;
-
   // ── Mode assistant : masquer la modale de workspace (Phase 3) ──────────
-  if (isAssistantMode || onAssistantHome) return null;
+  if (isAssistantMode) return null;
+
+  if (!isOpen) return null;
 
   const cardMotionProps = shouldReduceMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }

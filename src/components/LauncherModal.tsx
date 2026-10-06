@@ -19,6 +19,7 @@ import bgVideo from '../../assets/video.mp4';
 // @ts-ignore - Asset handled by bundler
 import logo from '../../assets/images/logo-sombre.png';
 import { ideApi } from '../services/ideApi.js';
+import { isAssistantProductMode } from '../config/productMode.js';
 
 /**
  * LauncherModal — écran d'accueil et de sélection immersif affiché au démarrage.
@@ -54,11 +55,18 @@ export function LauncherModal() {
   const [isOpeningLast, setIsOpeningLast] = useState(false);
 
   useEffect(() => {
+    // Mode assistant (réorientation Phase 3) : pas d'écran de sélection de
+    // projet au démarrage. L'accueil est la vue vocale (AssistantView).
+    if (isAssistantProductMode()) {
+      setIsOpen(false);
+      return;
+    }
     if (sessionStorage.getItem(LAUNCHER_DONE_KEY) === '1') {
       setIsOpen(false);
       return;
     }
-    if (pathname === '/' || pathname === '/ide') {
+    // Le launcher ne s'ouvre que pour l'IDE/Atelier legacy, pas sur l'accueil vocal.
+    if (pathname === '/ide' || pathname === '/atelier') {
       setIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,6 +93,7 @@ export function LauncherModal() {
   // Réouverture événementielle
   useEffect(() => {
     const handleReopen = () => {
+      if (isAssistantProductMode()) return;
       setIsOpen(true);
       fetch('/api/self-root/workspaces')
         .then((r) => (r.ok ? r.json() : null))
@@ -152,6 +161,8 @@ export function LauncherModal() {
     navigate('/notebooks');
   }, [navigate]);
 
+  // Garde finale : jamais afficher le launcher en mode assistant.
+  if (isAssistantProductMode()) return null;
   if (!isOpen) return null;
 
   const containerVariants = {

@@ -476,9 +476,22 @@ export function initSelfRoot(): void {
     }
   }
 
-  // Toujours démarrer sans projet actif : l'utilisateur doit choisir un workspace
-  // via le sélecteur Multi-Workspace à chaque démarrage.
-  // La liste des workspaces récents (workspaces.json) est conservée pour la sélection rapide.
+  // ── Mode assistant « voice-first » (réorientation) ──────────────────────
+  // Hors legacy-ide, Leanna ne gère que son propre code : on verrouille
+  // directement SELF_ROOT sur l'application, sans écran de sélection de projet.
+  // Cela permet à l'assistant (mémoire scopée, Atelier) de disposer d'un root
+  // valide dès le démarrage.
+  const rawMode = process.env.LEANNA_PRODUCT_MODE?.trim().toLowerCase();
+  if (rawMode && rawMode !== "legacy-ide") {
+    SELF_ROOT = Leanna_APP_ROOT;
+    WORKSPACE_SITE_URL = "";
+    console.log(`[SelfRoot] Mode assistant — SELF_ROOT verrouillé sur l'app : ${SELF_ROOT}`);
+    return;
+  }
+
+  // Mode legacy-ide : démarrer sans projet actif ; l'utilisateur choisit un
+  // workspace via le sélecteur Multi-Workspace à chaque démarrage.
+  // La liste des workspaces récents (workspaces.json) est conservée.
   SELF_ROOT = "";
   WORKSPACE_SITE_URL = "";
   console.log("[SelfRoot] Démarrage sans projet — sélecteur Multi-Workspace requis.");
