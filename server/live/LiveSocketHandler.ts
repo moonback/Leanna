@@ -32,6 +32,7 @@ import {
   isToolAllowedForProfile,
 } from './toolProfiles.js';
 import { getProductConfig } from '../config/environment.js';
+import { getProfilePromptSections } from '../runtime/prompts/profilePrompts.js';
 
 // Type compatible avec l'ancien SkillManager pour une migration progressive
 type SkillManager = SkillManagerV2;
@@ -606,6 +607,14 @@ export function attachLiveWebSocket(
         workspace: getWorkspaceRoot(),
         mode: sessionMode,
       });
+
+      // ── Prompt propre au profil de session (Phase 5) ──────────────────
+      // Assistant vocal → règles orales (voice.md) ; Atelier → édition prudente
+      // (selfedit.md). Injecté ici pour que l'expérience voix/atelier soit
+      // explicitement cadrée, en complément du prompt système de base.
+      for (const section of getProfilePromptSections(sessionProfile)) {
+        systemText += `\n\n${section.content}`;
+      }
 
       if (WORKSPACE_SITE_URL) {
         systemText += `\n\n[Workspace — Site associé]\nL'URL du site web associé à ce projet est : ${WORKSPACE_SITE_URL}`;

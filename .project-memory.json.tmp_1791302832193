@@ -1,0 +1,542 @@
+[
+  {
+    "id": "3ac60b56-562b-43b7-851c-0dfc44f8b5c7",
+    "content": "Décision \"replan\" prise pour goal=\"Inspecter les structures existantes des documents riches\" après 1 tentative(s) → Recommandation: Il faut soit déclarer explicitement la permission de lecture pour reasoning_think, soit utiliser une autre méthode de lecture autorisée avant de relancer l'inspection.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Inspecter les structures existantes des documents riches",
+      "reasoning_think"
+    ],
+    "createdAt": "2026-10-03T16:51:26.305Z",
+    "updatedAt": "2026-10-03T16:51:26.305Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "140ca370-dc01-43f2-81fc-50f647e1b42c",
+    "content": "Décision \"escalate\" prise pour goal=\"Inspecter les structures existantes des documents riches\" après 1 tentative(s) → Recommandation: Après déclaration explicite de la permission read pour verify_typecheck, une nouvelle tentative devrait permettre l'inspection.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Inspecter les structures existantes des documents riches",
+      "verify_typecheck"
+    ],
+    "createdAt": "2026-10-03T16:51:42.749Z",
+    "updatedAt": "2026-10-03T16:51:42.749Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "0631df60-3697-4c06-b9dc-09551a380b12",
+    "content": "Décision \"replan\" prise pour goal=\"Identifier le workflow échoué\" après 1 tentative(s) → Recommandation: Le workflow est peut-être enregistré sous un autre intitulé ou absent de la mémoire ; il faut élargir la recherche ou consulter une autre source de contexte.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Identifier le workflow échoué",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-03T17:05:02.057Z",
+    "updatedAt": "2026-10-03T17:05:02.057Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "984e5da9-8d47-46c7-8781-8ea3a637368e",
+    "content": "Échec sur skill=\"generate_codebase_markdown\" : La cause concrète de l'échec n'a pas encore été identifiée. Les fichiers responsables, les traces d'erreur et les résultats de tests n'ont pas été examinés. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"L'échec doit être isolé en ciblant les fichiers et composants mentionnés dans codebase.md, puis en recherchant les journaux, gestionnaires d'erreurs, tests associés et points d'entrée du flux concerné.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "generate_codebase_markdown"
+    ],
+    "createdAt": "2026-10-03T17:05:26.138Z",
+    "updatedAt": "2026-10-03T17:05:26.138Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "3c20c31e-469b-46c1-a134-5c608e02814e",
+    "content": "Décision \"replan\" prise pour goal=\"Analyser la cause de l’échec\" après 1 tentative(s) → Recommandation: L'échec doit être isolé en ciblant les fichiers et composants mentionnés dans codebase.md, puis en recherchant les journaux, gestionnaires d'erreurs, tests associés et points d'entrée du flux concerné.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Analyser la cause de l’échec",
+      "generate_codebase_markdown"
+    ],
+    "createdAt": "2026-10-03T17:05:26.138Z",
+    "updatedAt": "2026-10-03T17:05:26.138Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "d945db33-5072-4a9c-bc34-510029b4d0b0",
+    "content": "Échec sur skill=\"read_project_file\" : La cause de l’échec n’est pas déterminable à partir de cet inventaire seul : aucun message d’erreur, trace, résultat de test ou fichier explicitement lié à l’échec n’a encore été examiné. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"L’échec est probablement documenté dans les règles, workflows, compétences ou fichiers de configuration associés à l’action concernée. Il faut rechercher les messages d’erreur, les tests et les instructions du workflow pertinent.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "read_project_file"
+    ],
+    "createdAt": "2026-10-03T17:05:33.209Z",
+    "updatedAt": "2026-10-03T17:05:33.209Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "66625063-0c71-46f0-9786-577d386600ce",
+    "content": "Échec sur skill=\"save_memory\" : La cause de l'échec initial n'est toujours pas déterminée, faute de journal d'exécution, d'état des dépendances et d'analyse des implémentations. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"L'étape suivante doit consister à examiner les implémentations concernées, récupérer les logs ou traces de l'échec et vérifier l'état des dépendances afin d'identifier une cause concrète.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "save_memory"
+    ],
+    "createdAt": "2026-10-03T17:05:39.524Z",
+    "updatedAt": "2026-10-03T17:05:39.524Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "b13836e6-d491-49e9-80e4-3a738c1120d8",
+    "content": "Échec sur skill=\"search_memory\" : Aucune information mémorisée ne permet d'analyser la cause de l'échec. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"La cause doit être déterminée à partir du contexte ou des logs disponibles, plutôt que de la mémoire.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-03T17:05:47.188Z",
+    "updatedAt": "2026-10-03T17:05:47.188Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "59f2b2f0-7842-4cc1-84e8-7165d4cd9a41",
+    "content": "Échec sur skill=\"list_project_files\" : Aucun fichier cible n’a encore été identifié et le contenu détaillé des répertoires n’a pas été récupéré. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Les données récupérables se trouvent probablement dans les répertoires temporaires ou de configuration. Il faut poursuivre avec une exploration ciblée, en priorité .tmp-docstore-a et .tmp-docstore-b, puis rechercher les fichiers pertinents.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-03T17:05:57.299Z",
+    "updatedAt": "2026-10-03T17:05:57.299Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "84a5afcd-1e94-469b-bc76-0e6076d8faf4",
+    "content": "Échec sur skill=\"generate_codebase_markdown\" : L'analyse repose uniquement sur la structure des fichiers, sans revue détaillée des implémentations ni exécution des tests. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"changer approche\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "generate_codebase_markdown"
+    ],
+    "createdAt": "2026-10-03T17:06:03.904Z",
+    "updatedAt": "2026-10-03T17:06:03.904Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "f832c123-a45f-45e7-a777-05bdfe0f2237",
+    "content": "Risque de boucle détecté (repeated_action): Même pattern répété (3x) : continue:ok → Recommandation: Interrompre ce pattern: diversifier l'approche, proposer plusieurs alternatives au lieu de réitérer.",
+    "category": "decision",
+    "tags": [
+      "risk",
+      "reflection",
+      "lesson",
+      "save_memory"
+    ],
+    "createdAt": "2026-10-03T17:06:49.816Z",
+    "updatedAt": "2026-10-03T17:06:49.816Z",
+    "confidence": 0.8733333333333333,
+    "usageCount": 0
+  },
+  {
+    "id": "77b67ee1-ef70-41e9-992b-5442fc76b058",
+    "content": "Décision \"escalate\" prise pour goal=\"Escalader l’échec non récupérable\" après 1 tentative(s) → Recommandation: L’échec est non récupérable ou suffisamment bloquant pour nécessiter une intervention humaine immédiate.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Escalader l’échec non récupérable",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-03T17:06:56.458Z",
+    "updatedAt": "2026-10-03T17:06:56.458Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "049da72f-ddda-42b0-94e5-43ac9ff0f607",
+    "content": "Décision \"replan\" prise pour goal=\"Vérifier et clôturer le traitement\" après 1 tentative(s) → Recommandation: Le fichier cible doit être identifié explicitement avant de relancer la vérification, éventuellement en listant les fichiers pertinents du répertoire courant.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Vérifier et clôturer le traitement",
+      "verify_file"
+    ],
+    "createdAt": "2026-10-03T17:07:19.920Z",
+    "updatedAt": "2026-10-03T17:07:19.920Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "5fde4fb2-49e6-4e78-b822-f694747904c3",
+    "content": "Risque de boucle détecté (no_progress): Impasse sur 6 actions : confiance stagne (97%), 1 succès confirmés → Recommandation: Interrompre ce pattern: diversifier l'approche, proposer plusieurs alternatives au lieu de réitérer.",
+    "category": "decision",
+    "tags": [
+      "risk",
+      "reflection",
+      "lesson",
+      "save_memory"
+    ],
+    "createdAt": "2026-10-03T17:07:35.025Z",
+    "updatedAt": "2026-10-03T17:07:35.025Z",
+    "confidence": 0.9,
+    "usageCount": 0
+  },
+  {
+    "id": "b6727b7d-2287-4ac7-a82f-82b77394e30c",
+    "content": "Échec sur skill=\"search_memory\" : La vérification ne permet pas d’identifier ni de confirmer le fichier ou l’élément attendu. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"L’absence de résultat peut s’expliquer par une recherche trop générale, un élément inexistant ou le chemin précédent qui pointe vers un répertoire plutôt qu’un fichier précis.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-03T17:07:43.711Z",
+    "updatedAt": "2026-10-03T17:07:43.711Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "b74b2d36-fff6-430f-9ba7-fe5828cbb30b",
+    "content": "Échec sur skill=\"search_in_files\" : Le contenu n’a pas encore été vérifié directement dans le fichier ; la recherche seule ne permet donc pas de confirmer que le traitement est clôturé. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"La lecture ciblée de docs\\AGENTIC_RUNTIME.md autour de la ligne 175 permettra de valider définitivement le résultat.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "search_in_files"
+    ],
+    "createdAt": "2026-10-03T17:07:51.630Z",
+    "updatedAt": "2026-10-03T17:07:51.630Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "8e124b86-0473-48c9-9969-a057211074f6",
+    "content": "Décision \"replan\" prise pour goal=\"Analyser l’architecture du store des agents personnalisés\" après 1 tentative(s) → Recommandation: Il faut d’abord obtenir l’arborescence du projet ou les fichiers potentiellement concernés, notamment ceux liés à store, agents, registry, api, routes et server.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Analyser l’architecture du store des agents personnalisés",
+      "reasoning_think"
+    ],
+    "createdAt": "2026-10-04T18:43:51.485Z",
+    "updatedAt": "2026-10-04T18:43:51.485Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "782fe2d9-2f08-4526-8342-aaba3c13d65e",
+    "content": "Décision \"replan\" prise pour goal=\"Définir les configurations des cinq nouveaux agents\" après 1 tentative(s) → Recommandation: Le fichier est situé à un autre emplacement, porte un nom différent ou n'a pas encore été créé. Il faut d'abord explorer l'arborescence du workspace et rechercher les fichiers de store ou de configuration des agents.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Définir les configurations des cinq nouveaux agents",
+      "verify_file"
+    ],
+    "createdAt": "2026-10-04T18:46:09.830Z",
+    "updatedAt": "2026-10-04T18:46:09.830Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "722ba6df-836f-442f-9f35-d419b25074cf",
+    "content": "Échec sur skill=\"search_memory\" : Les configurations des cinq nouveaux agents restent introuvables et n'ont pas pu être définies ni vérifiées. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Les configurations doivent être recherchées dans une autre source, notamment le fichier attendu ou la structure de configuration du projet, plutôt que dans la mémoire.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-04T18:46:22.782Z",
+    "updatedAt": "2026-10-04T18:46:22.782Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "8bad9a58-d0f9-4c83-99b8-d757eab8b80a",
+    "content": "Échec sur skill=\"list_project_files\" : Les configurations des cinq agents n'ont pas encore été identifiées, lues ou définies dans le fichier attendu. Le chemin cible et la structure de configuration restent inconnus. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Il faut maintenant filtrer l'inventaire sur les fichiers contenant des noms d'agents, des configurations ou des références à un fichier attendu, puis inspecter leur contenu avant de modifier ou créer les configurations.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-04T18:46:29.285Z",
+    "updatedAt": "2026-10-04T18:46:29.285Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "4ab2948e-a98e-45dc-8d47-291b827e6283",
+    "content": "Échec sur skill=\"save_memory\" : L'objectif principal n'est pas encore atteint : les identifiants, noms, descriptions, instructions, capacités et paramètres par défaut n'ont pas été créés ou validés dans le fichier de configuration prévu. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Il faut maintenant localiser le fichier de configuration attendu, inspecter son schéma et ses conventions existantes, puis y ajouter les cinq agents avec des identifiants stables et des paramètres conformes.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "save_memory"
+    ],
+    "createdAt": "2026-10-04T18:46:43.716Z",
+    "updatedAt": "2026-10-04T18:46:43.716Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "b9e32529-dd57-489f-97d9-1e273c07a0d5",
+    "content": "Risque de boucle détecté (oscillation): Oscillation (5 alternances) entre avancement et correction — stratégie chaotique → Recommandation: Interrompre ce pattern: diversifier l'approche, proposer plusieurs alternatives au lieu de réitérer.",
+    "category": "decision",
+    "tags": [
+      "risk",
+      "reflection",
+      "lesson",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-04T18:46:51.075Z",
+    "updatedAt": "2026-10-04T18:46:51.075Z",
+    "confidence": 0.95,
+    "usageCount": 0
+  },
+  {
+    "id": "c91a01b2-32cf-4cb7-a69b-5c015b255f39",
+    "content": "Échec sur skill=\"list_project_files\" : Les fichiers pertinents contenant les configurations ou le format attendu des cinq agents restent à localiser et à vérifier. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Les configurations attendues se trouvent probablement dans les répertoires de règles, skills, workflows ou dans un fichier de configuration dédié. Il faut rechercher les fichiers et références contenant les termes agent, configuration ou les noms des cinq agents, puis inspecter le fichier cible avant toute modification.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-04T18:46:57.115Z",
+    "updatedAt": "2026-10-04T18:46:57.115Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "87332f32-908e-4a34-8512-389cf1465a9f",
+    "content": "Échec sur skill=\"write_project_file\" : Le contenu du fichier n'a pas encore été relu ni vérifié pour confirmer que les cinq configurations sont présentes et correctement structurées. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Le fichier contient bien les configurations définies, mais une lecture de validation est nécessaire pour confirmer leur exactitude.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "write_project_file"
+    ],
+    "createdAt": "2026-10-04T18:47:12.978Z",
+    "updatedAt": "2026-10-04T18:47:12.978Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "2dc219ec-89e9-4e3f-be57-c8f898bdad6b",
+    "content": "Risque de boucle détecté (oscillation): Oscillation (4 alternances) entre avancement et correction — stratégie chaotique → Recommandation: Interrompre ce pattern: diversifier l'approche, proposer plusieurs alternatives au lieu de réitérer.",
+    "category": "decision",
+    "tags": [
+      "risk",
+      "reflection",
+      "lesson",
+      "verify_typecheck"
+    ],
+    "createdAt": "2026-10-04T18:47:18.123Z",
+    "updatedAt": "2026-10-04T18:47:18.123Z",
+    "confidence": 0.95,
+    "usageCount": 0
+  },
+  {
+    "id": "9ab4ded1-40ed-422a-b9cd-f022a119d8e4",
+    "content": "Échec sur skill=\"list_project_files\" : La liste affichée est tronquée et ne contient pas le détail des 905 fichiers, mais le comptage et l’opération sont valides. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Les fichiers de règles et de compétence graphify doivent être consultés en priorité afin de déterminer les prochaines actions pertinentes.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-05T07:17:35.345Z",
+    "updatedAt": "2026-10-05T07:17:35.345Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "a836b54b-8882-4c66-b3f6-df5a3df30a5f",
+    "content": "Décision \"replan\" prise pour goal=\"Localiser le fichier README.md\" après 1 tentative(s) → Recommandation: Une recherche ciblée en excluant le dossier graphify-out/cache et les fichiers générés permettra d’obtenir le chemin réel du README.md.",
+    "category": "decision",
+    "tags": [
+      "decision",
+      "reflection",
+      "lesson",
+      "Localiser le fichier README.md",
+      "search_in_files"
+    ],
+    "createdAt": "2026-10-05T07:44:15.354Z",
+    "updatedAt": "2026-10-05T07:44:15.354Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "6f4eadc9-8f41-49ce-b6ce-79b51021aa99",
+    "content": "API endpoint test item for hierarchical memory",
+    "category": "decision",
+    "tags": [
+      "api-test",
+      "promoted-from-session"
+    ],
+    "createdAt": "2026-10-05T15:16:59.770Z",
+    "updatedAt": "2026-10-06T16:07:12.192Z",
+    "confidence": 0.9,
+    "usageCount": 0
+  },
+  {
+    "id": "d85a7db0-3303-46d2-a9db-9fc391a6d83b",
+    "content": "Convention de nommage : les fichiers de routes utilisent camelCase et se terminent par Router.",
+    "category": "convention",
+    "tags": [
+      "convention",
+      "routing"
+    ],
+    "createdAt": "2026-10-05T15:17:07.383Z",
+    "updatedAt": "2026-10-06T16:00:30.910Z",
+    "confidence": 0.95,
+    "usageCount": 0
+  },
+  {
+    "id": "bd78d74f-bf4b-449a-8804-284ceb8becb0",
+    "content": "Règle importante découverte pendant la session : toujours passer par HierarchicalMemoryService.",
+    "category": "decision",
+    "tags": [
+      "rule",
+      "promoted-from-session"
+    ],
+    "createdAt": "2026-10-05T15:17:07.431Z",
+    "updatedAt": "2026-10-06T16:00:30.923Z",
+    "confidence": 0.9,
+    "usageCount": 0
+  },
+  {
+    "id": "fbe1d408-66ac-48b2-993a-374a209ebe84",
+    "content": "Documentation sur SuperHierarchicalArchitecture pour le projet",
+    "category": "architecture",
+    "tags": [
+      "test"
+    ],
+    "createdAt": "2026-10-05T15:17:07.438Z",
+    "updatedAt": "2026-10-06T16:00:30.928Z",
+    "confidence": 0.8,
+    "usageCount": 0
+  },
+  {
+    "id": "32ba622b-8cc7-42a7-9381-af212e638d92",
+    "content": "Échec sur skill=\"list_project_files\" : Le résultat est incomplet ou tronqué, donc le recensement exhaustif et la vérification de tous les fichiers ne sont pas encore possibles. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Relancer l’inventaire avec une portée ou un filtrage plus ciblé afin d’obtenir la liste complète, éventuellement par sous-répertoires.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-06T10:20:09.375Z",
+    "updatedAt": "2026-10-06T10:20:09.375Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "9ef4e281-c63d-4ab2-8732-1bbeb9239023",
+    "content": "Risque de boucle détecté (oscillation): Oscillation (3 alternances) entre avancement et correction — stratégie chaotique → Recommandation: Interrompre ce pattern: diversifier l'approche, proposer plusieurs alternatives au lieu de réitérer.",
+    "category": "decision",
+    "tags": [
+      "risk",
+      "reflection",
+      "lesson",
+      "list_project_files"
+    ],
+    "createdAt": "2026-10-06T10:20:09.376Z",
+    "updatedAt": "2026-10-06T10:20:09.376Z",
+    "confidence": 0.9266666666666667,
+    "usageCount": 0
+  },
+  {
+    "id": "b2694a12-9ce6-4e89-a70a-e37474d60dcd",
+    "content": "Échec sur skill=\"read_project_file\" : Le contenu complet du fichier n'a pas été récupéré, ce qui empêche de recenser et vérifier toutes les entrées. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Une nouvelle lecture ciblée des lignes 10 à 31 permettra de compléter l'inventaire sans relire les lignes déjà obtenues.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "read_project_file"
+    ],
+    "createdAt": "2026-10-06T10:20:16.595Z",
+    "updatedAt": "2026-10-06T10:20:16.595Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "06935dd4-9d73-4a2b-a0ad-e60a9ca98227",
+    "content": "Échec sur skill=\"verify_typecheck\" : Le typage des fichiers Markdown ciblés n'est pas validé. Aucun détail exploitable n'a été fourni dans stdout, stderr ou parsedErrors. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"L'échec peut provenir d'un problème transitoire ou d'une mauvaise remontée des diagnostics. Relancer la vérification afin d'obtenir un résultat cohérent et, si possible, les erreurs détaillées.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "verify_typecheck"
+    ],
+    "createdAt": "2026-10-06T10:20:20.588Z",
+    "updatedAt": "2026-10-06T10:20:20.588Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  },
+  {
+    "id": "d97901f8-bd61-4581-ba7e-c9e3a0185a9c",
+    "content": "Échec sur skill=\"search_memory\" : Le recensement n’est pas encore exhaustif : les autres fichiers Markdown ciblés, leur emplacement et leur contenu n’ont pas été vérifiés. Le second résultat est tronqué et ne permet pas de confirmer précisément les fichiers concernés. → Recommandation: Éviter de réessayer à l'identique. Tester d'abord l'hypothèse: \"Une recherche complémentaire ciblée sur les noms et chemins des fichiers Markdown, notamment codebase.md et tout autre fichier .md à la racine ou dans les sous-répertoires, permettra de compléter et valider l’inventaire.\"",
+    "category": "decision",
+    "tags": [
+      "error_pattern",
+      "reflection",
+      "lesson",
+      "search_memory"
+    ],
+    "createdAt": "2026-10-06T10:20:28.679Z",
+    "updatedAt": "2026-10-06T10:20:28.679Z",
+    "confidence": 0.6,
+    "usageCount": 0
+  }
+]

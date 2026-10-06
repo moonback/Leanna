@@ -47,7 +47,7 @@ invalide.
 | 2 | Verrouillage de `SELF_ROOT` sur l'application | ✅ Terminée |
 | 3 | Nouvelle interface : accueil vocal + Atelier | ✅ Terminée |
 | 4 | Recherche web optimisée pour la voix | ✅ Terminée |
-| 5 | Prompts et expérience vocale | 📋 Planifié |
+| 5 | Prompts et expérience vocale | ✅ Terminée |
 | 6 | Atelier : auto-modification sûre | 📋 Planifié |
 | 7 | Rétrécissement du périmètre (legacy derrière flags) | 📋 Planifié |
 | 8 | Tests, doc, packaging | 📋 Planifié |
@@ -196,3 +196,48 @@ posé ; en son absence (typiquement en test), le comportement reste inchangé.
   `functionDeclarations` dans une session **Live** non vérifiée côté API — c'est
   pourquoi on a choisi la voie serveur `web_quick_search` (`generateContent`
   hors session Live), robuste quel que soit le modèle Live.
+
+### Correctif démarrage (post-Phase 3/4)
+
+- **Symptôme** : au démarrage, l'écran de sélection de workspace s'affichait au
+  lieu de l'accueil vocal.
+- **Causes** : (1) la suppression des modals dépendait de
+  `VITE_LEANNA_PRODUCT_MODE`, absent du `.env` (seul `LEANNA_PRODUCT_MODE`,
+  non préfixé, y figurait — non exposé au front par Vite) ; (2) le
+  `LauncherModal` (écran immersif) n'avait pas été traité en Phase 3.
+- **Corrigé** :
+  - Ajout de `VITE_LEANNA_PRODUCT_MODE` dans `.env` (miroir front).
+  - Nouveau helper `src/config/productMode.ts` (`isAssistantProductMode()`,
+    défaut assistant).
+  - `LauncherModal` et `StartupProjectModal` masqués en mode assistant.
+  - `initSelfRoot` (serveur) : en mode assistant, `SELF_ROOT` est verrouillé
+    directement sur `Leanna_APP_ROOT` au démarrage (plus d'écran de sélection ;
+    l'assistant dispose d'un root valide immédiatement).
+- **Rappel** : après modification du `.env`, redémarrer le serveur dev + Vite.
+
+### Phase 5 — Prompts et expérience vocale
+
+- **Nouveaux prompts** :
+  - `server/runtime/prompts/voice.md` : règles orales — phrases courtes, pas de
+    markdown/listes lues à voix haute, citation des sources par nom de site
+    (jamais l'URL), une question à la fois, honnêteté sur l'incertitude, jamais
+    inventer de source, barge-in.
+  - `server/runtime/prompts/selfedit.md` : règles d'édition prudente de l'Atelier
+    — lire avant d'écrire, petits diffs, vérifier avant de redémarrer, liste des
+    fichiers « noyau » non modifiables, validation humaine par clic, verrou
+    web↔code.
+  - Ces deux fichiers portent un `scope` non reconnu par le pipeline automatique
+    (`voice`/`atelier`) : ils restent **inactifs par défaut** et ne sont injectés
+    qu'explicitement selon le profil.
+- **Injection** : `server/runtime/prompts/profilePrompts.ts`
+  (`getProfilePromptSections`) lit le bon fichier selon le profil ;
+  `LiveSocketHandler` l'ajoute au prompt système (voice pour `assistant`,
+  selfedit pour `atelier`).
+- **Tests** : `profilePrompts.test.ts` (3 cas). Plusieurs tests `setSelfRoot`
+  sur dossiers temporaires ont été rendus déterministes face à une fuite
+  d'environnement `LEANNA_PRODUCT_MODE` entre fichiers (`delete` en tête :
+  `selfRoot.test.ts`, `security.test.ts`, `sandbox.test.ts`,
+  `knowledge.test.ts`, `codebase.test.ts`, `leannaignore.test.ts`,
+  `safeguards.ignore.test.ts`).
+- **Régression (2026-10-06)** : backend **936 tests, 933 réussis, 3 échecs**
+  (toujours les 3 `graphify`), soit +3 tests ; front **27/27**. Typecheck vert.
