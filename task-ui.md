@@ -17,7 +17,13 @@
 
 **UI terminée : P0 (6/6) + P1 (4/4).** Mission Control · Insights · Project Intelligence · Mission Timeline · Agent State bar · Autonomy Center · Simulation/Dry-Run · Agent Swarm · Explainability.
 
-**Enchaînements fonctionnels** : bouton « Diagnostiquer & créer » sur Mission Control (`POST /api/missions/doctor/create` → crée les missions d'amélioration du Doctor via `mission_create`, puis lien vers la timeline) · bannière « point du jour » (Daily Briefing) affichée automatiquement au chargement.
+**Navigation** : nouvelle `GlobalSidebar` (`src/components/GlobalSidebar.tsx`) — barre verticale repliable, étiquettes, pastille d'état agent en tête. Deux variantes :
+- `variant="global"` (par défaut) : navigation par route, groupée par capacité (Pilotage · Intelligence · Travail · Mémoire · Observabilité) — remplace l'ancienne `UnifiedSidebar` globale.
+- `variant="ide"` (dans `IdeView`) : rend les outils-panneaux IDE (Explorateur, Recherche, Terminal, GitHub, CI/CD, Données, Outils, IA) à partir de `ideSidebarConfig`, en pilotant les toggles existants `showX`/`onToggleX` ; items `requiresAssistant` grisés hors connexion. Même look étiqueté/repliable. **Bloc assistant compact en tête (parité 100 %)** : CTA « Connecter l'IA » hors ligne ; une fois connecté, contrôles Chat · Micro · Mode (Full/Ask) · Déconnecter (replié = Chat + Micro).
+
+L'ancienne `UnifiedSidebar` n'est plus montée (conservée dans le repo pour compat).
+
+**Enchaînements fonctionnels** : bouton « Diagnostiquer & créer » sur Mission Control (`POST /api/missions/doctor/create` → crée les missions d'amélioration du Doctor via `mission_create`, puis lien vers la timeline) · bannière « point du jour » (Daily Briefing) affichée automatiquement au chargement · bouton « Automatiser » par opportunité (`POST /api/knowledge/automate` → compile un workflow puis le crée) · bouton « Lancer » par proposition d'anticipation (`POST /api/missions` → crée la mission suggérée, puis timeline).
 
 Backend exposé pour l'UI : `GET /api/knowledge/doctor · /daily-briefing · /opportunities · /profile` (nouveau `insightsRouter`), `GET /api/missions/:id/timeline` et `/timeline/:step` (Mission Time Travel), `POST /api/missions/simulate` (Mission Simulator dry-run), `POST /api/agents/compose-swarm` (SwarmComposer), `POST /api/knowledge/explain` (Predictive Agent + Mission Evolution), et les `proposals` d'anticipation via le WebSocket `/autonomy` existant.
 
