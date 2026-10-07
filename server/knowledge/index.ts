@@ -151,3 +151,101 @@ export {
   type ExtractionStats,
 } from "./WorkspaceIndexer.js";
 
+
+// Playbooks appris automatiquement (P0) — stratégies réutilisables par classe de problème
+export {
+  PlaybookStore,
+  playbookStore,
+  type Playbook,
+  type PlaybookStep,
+  type PlaybookMissionInput,
+} from "./PlaybookStore.js";
+
+// Project Intelligence Profile (P0) — le cerveau par projet (stack, commandes, stratégies)
+export {
+  ProjectProfile,
+  projectProfile,
+  type ProjectIntelligenceProfile,
+  type DetectedStack,
+  type StrategyInsight,
+  type KnowledgeSummary,
+  type PackageManager,
+} from "./ProjectProfile.js";
+
+// AI Project Doctor (P0) — diagnostic santé projet + génération de missions d'amélioration
+export {
+  ProjectDoctor,
+  projectDoctor,
+  type HealthReport,
+  type HealthDimension,
+  type HealthIssue,
+  type IssueSeverity,
+  type ImprovementMissionRequest,
+  type SecuritySignal,
+  type ProjectDoctorOptions,
+} from "./ProjectDoctor.js";
+
+// Predictive Agent (P1) — prédiction pré-vol (succès, risques, stratégie, étape fragile)
+export {
+  PredictionEngine,
+  predictionEngine,
+  type PredictionReport,
+  type StepPrediction,
+  type PredictionRisk,
+  type PredictInput,
+  type PredictionEstimate,
+  type PredictionEngineOptions,
+} from "./PredictionEngine.js";
+
+// Opportunity Engine (P1) — recherche proactive de travail utile (automatisations, optims, risques)
+export {
+  OpportunityEngine,
+  opportunityEngine,
+  type Opportunity,
+  type OpportunityKind,
+  type OpportunityReport,
+  type OpportunityEngineOptions,
+} from "./OpportunityEngine.js";
+
+// Mission Evolution (#6) — apprentissage de la meilleure APPROCHE par classe de problème
+export {
+  MissionEvolutionStore,
+  missionEvolutionStore,
+  approachIdFromSteps,
+  type ApproachRecord,
+  type ProblemEvolution,
+  type ApproachRecommendation,
+} from "./MissionEvolution.js";
+
+// Daily AI Briefing (#13) — digest matinal composé (santé + opportunités + profil)
+export {
+  DailyBriefing,
+  dailyBriefing,
+  type BriefingReport,
+  type BriefingItem,
+  type BriefingSeverity,
+  type RecommendedMission,
+  type DailyBriefingOptions,
+} from "./DailyBriefing.js";
+
+// NL → Automation (#15) — compilateur langage naturel → workflow agentique
+export {
+  WorkflowCompiler,
+  workflowCompiler,
+  type CompiledWorkflow,
+  type CompiledStep,
+  type CompileResult,
+  type WorkflowCompilerOptions,
+} from "./WorkflowCompiler.js";
+
+// Voice Agent (#12) — interprète de commandes vocales (transcription → commandes agentiques)
+export {
+  VoiceCommandInterpreter,
+  voiceCommandInterpreter,
+  INTENT_SKILL,
+  type VoiceIntent,
+  type VoiceCommand,
+  type VoiceTarget,
+  type VoiceInterpretation,
+  type VoiceInterpreterOptions,
+} from "./VoiceCommandInterpreter.js";

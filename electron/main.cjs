@@ -201,6 +201,78 @@ function createWindow(splash, splashMinEnd) {
     systemPreferences.askForMediaAccess('camera');
   }
 
+  // ── Durcissement sécurité du <webview> du navigateur intégré ───────────────
+  // Le navigateur intégré charge des pages web arbitraires. Sans gardes, Electron
+  // accorderait par défaut caméra/micro/géoloc/notifications, autoriserait les
+  // popups et les téléchargements silencieux. On verrouille tout cela.
+  const { session: hardenSession } = require('electron');
+
+  // Seules les partitions de profils navigateur sont autorisées sur le <webview>.
+  const ALLOWED_WEBVIEW_PARTITION = /^persist:browser-[\w-]+$/;
+
+  // Permissions refusées par défaut aux pages chargées dans le navigateur.
+  const DENIED_WEBVIEW_PERMISSIONS = new Set([
+    'media',            // caméra + micro
+    'geolocation',
+    'notifications',
+    'midi',
+    'midiSysex',
+    'pointerLock',
+    'fullscreen',       // laissé à false par prudence ; ajustable si besoin
+    'openExternal',
+    'hid',
+    'serial',
+    'usb',
+  ]);
+
+  // Mémorise les partitions déjà équipées d'un handler de permissions.
+  const permissionGuardedPartitions = new Set();
+
+  function guardPartitionPermissions(partition) {
+    if (!partition || permissionGuardedPartitions.has(partition)) return;
+    permissionGuardedPartitions.add(partition);
+    try {
+      const ses = hardenSession.fromPartition(partition);
+      ses.setPermissionRequestHandler((_wc, permission, callback) => {
+        callback(!DENIED_WEBVIEW_PERMISSIONS.has(permission));
+      });
+      ses.setPermissionCheckHandler((_wc, permission) => !DENIED_WEBVIEW_PERMISSIONS.has(permission));
+      // Téléchargements : refusés par défaut dans le navigateur intégré.
+      ses.on('will-download', (event) => {
+        log('[webview] Téléchargement bloqué (non supporté dans le navigateur intégré).');
+        event.preventDefault();
+      });
+    } catch (e) {
+      log('[webview] Échec de pose des gardes de permission:', e.message);
+    }
+  }
+
+  // Verrouille les webPreferences de chaque <webview> au moment de son attache.
+  win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    // Pas de preload, pas d'intégration Node, isolation du contexte obligatoire.
+    delete webPreferences.preload;
+    delete webPreferences.preloadURL;
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webSecurity = true;
+    webPreferences.allowRunningInsecureContent = false;
+
+    // La partition doit être une partition de profil navigateur connue.
+    if (!ALLOWED_WEBVIEW_PARTITION.test(params.partition || '')) {
+      log('[webview] Partition refusée:', params.partition);
+      event.preventDefault();
+      return;
+    }
+    guardPartitionPermissions(params.partition);
+  });
+
+  // Certificats invalides : ne jamais passer outre dans le navigateur intégré.
+  win.webContents.on('certificate-error', (event, _url, _error, _cert, callback) => {
+    callback(false);
+  });
+
   return win;
 }
 
@@ -261,6 +333,28 @@ app.whenReady().then(() => {
 
   const win = createWindow(splash, splashMinEnd);
 
+  // Durcissement : interdire aux pages du <webview> d'ouvrir des popups ou de
+  // nouvelles fenêtres non contrôlées, et bloquer la navigation du shell lui-même.
+  app.on('web-contents-created', (_event, contents) => {
+    // Toute tentative d'ouverture de fenêtre (window.open, target=_blank) est refusée.
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) {
+        // Relayer au renderer : il pourra proposer d'ouvrir dans un onglet/externe.
+        try { win.webContents.send('browser-open-url', url); } catch (_) { /* noop */ }
+      }
+      return { action: 'deny' };
+    });
+    // Empêcher le shell principal (fenêtre React) de naviguer ailleurs que l'app.
+    if (contents === win.webContents) {
+      contents.on('will-navigate', (navEvent, navUrl) => {
+        const startBase = process.env.ELECTRON_START_URL || `http://127.0.0.1:${process.env.VITE_SERVER_PORT || 4000}`;
+        if (!navUrl.startsWith(startBase)) {
+          navEvent.preventDefault();
+        }
+      });
+    }
+  });
+
   // Créer le tray une fois la fenêtre prête
   createTray(win);
 
@@ -314,8 +408,23 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('electron/open-external', async function (_event, url) {
+    // Allowlist stricte : seuls http(s) et mailto sont ouverts dans le navigateur
+    // par défaut du système. Bloque file:, les protocoles custom, javascript:, etc.
+    if (typeof url !== 'string' || !url.trim()) {
+      return { success: false, error: 'URL invalide.' };
+    }
+    let scheme;
+    try {
+      scheme = new URL(url).protocol.toLowerCase();
+    } catch {
+      return { success: false, error: 'URL malformée.' };
+    }
+    if (scheme !== 'http:' && scheme !== 'https:' && scheme !== 'mailto:') {
+      log('[open-external] Schéma refusé:', scheme);
+      return { success: false, error: `Schéma non autorisé : ${scheme}` };
+    }
     await shell.openExternal(url);
-    return true;
+    return { success: true };
   });
 
   ipcMain.handle('electron/get-project-root', async function () {
@@ -393,6 +502,154 @@ app.whenReady().then(() => {
       // Nettoyer le dossier partiellement cloné si présent
       try { if (fs.existsSync(clonePath)) await fs.promises.rm(clonePath, { recursive: true, force: true }); } catch (_) {}
       return { success: false, error: errMsg };
+    }
+  });
+
+  // ── Extensions Chromium (navigateur intégré) ─────────────────────────────────
+  // Electron ne supporte qu'un sous-ensemble de l'API Chrome Extensions et
+  // exige des extensions « décompressées » (dossier). Les extensions chargées
+  // ne sont pas restaurées automatiquement entre deux lancements : on persiste
+  // donc nous-mêmes la liste des chemins par partition dans userData, et on les
+  // recharge à la première utilisation de la partition.
+  const { session: electronSession } = require('electron');
+  const extensionsStorePath = path.join(app.getPath('userData'), 'browser-extensions.json');
+  // Partitions déjà réhydratées pendant cette session (évite les doubles chargements).
+  const hydratedPartitions = new Set();
+
+  function readExtensionsStore() {
+    try {
+      if (!fs.existsSync(extensionsStorePath)) return {};
+      const raw = fs.readFileSync(extensionsStorePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (e) {
+      log('[extensions] Lecture du store échouée:', e.message);
+      return {};
+    }
+  }
+
+  function writeExtensionsStore(store) {
+    try {
+      fs.writeFileSync(extensionsStorePath, JSON.stringify(store, null, 2), 'utf-8');
+    } catch (e) {
+      log('[extensions] Écriture du store échouée:', e.message);
+    }
+  }
+
+  function isValidPartition(partition) {
+    return typeof partition === 'string' && /^persist:browser-[\w-]+$/.test(partition);
+  }
+
+  function serializeExtension(ext) {
+    return {
+      id: ext.id,
+      name: ext.name,
+      version: ext.version,
+      path: ext.path,
+    };
+  }
+
+  // Recharge les extensions persistées pour une partition (une seule fois par session).
+  async function hydratePartition(partition) {
+    if (hydratedPartitions.has(partition)) return;
+    hydratedPartitions.add(partition);
+    const store = readExtensionsStore();
+    const paths = Array.isArray(store[partition]) ? store[partition] : [];
+    if (!paths.length) return;
+    const ses = electronSession.fromPartition(partition);
+    const stillValid = [];
+    for (const extPath of paths) {
+      try {
+        if (!fs.existsSync(extPath)) {
+          log('[extensions] Chemin introuvable, retiré du store:', extPath);
+          continue;
+        }
+        await ses.extensions.loadExtension(extPath, { allowFileAccess: true });
+        stillValid.push(extPath);
+      } catch (e) {
+        log('[extensions] Rechargement échoué pour', extPath, ':', e.message);
+      }
+    }
+    // Nettoyer le store des chemins devenus invalides.
+    if (stillValid.length !== paths.length) {
+      store[partition] = stillValid;
+      writeExtensionsStore(store);
+    }
+  }
+
+  ipcMain.handle('electron/browser-extensions-list', async function (_event, partition) {
+    if (!isValidPartition(partition)) return { success: false, error: 'Partition invalide.' };
+    try {
+      await hydratePartition(partition);
+      const ses = electronSession.fromPartition(partition);
+      const all = ses.extensions.getAllExtensions();
+      return { success: true, extensions: all.map(serializeExtension) };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('electron/browser-extensions-load', async function (_event, partition, extPath) {
+    if (!isValidPartition(partition)) return { success: false, error: 'Partition invalide.' };
+    let targetPath = extPath;
+    // Si aucun chemin fourni, ouvrir un sélecteur de dossier.
+    if (!targetPath) {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Choisir le dossier de l\'extension (décompressée)',
+      });
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, canceled: true };
+      }
+      targetPath = result.filePaths[0];
+    }
+    if (typeof targetPath !== 'string' || !fs.existsSync(targetPath)) {
+      return { success: false, error: 'Dossier d\'extension introuvable.' };
+    }
+    // Vérifier la présence d'un manifest.json (indice d'une extension décompressée).
+    if (!fs.existsSync(path.join(targetPath, 'manifest.json'))) {
+      return { success: false, error: 'Aucun manifest.json dans ce dossier — ce n\'est pas une extension décompressée.' };
+    }
+    try {
+      await hydratePartition(partition);
+      const ses = electronSession.fromPartition(partition);
+      const ext = await ses.extensions.loadExtension(targetPath, { allowFileAccess: true });
+      // Persister le chemin.
+      const store = readExtensionsStore();
+      const list = Array.isArray(store[partition]) ? store[partition] : [];
+      if (!list.includes(targetPath)) list.push(targetPath);
+      store[partition] = list;
+      writeExtensionsStore(store);
+      log('[extensions] Chargée:', ext.name, ext.version, 'sur', partition);
+      return { success: true, extension: serializeExtension(ext) };
+    } catch (e) {
+      log('[extensions] Chargement échoué:', e.message);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('electron/browser-extensions-remove', async function (_event, partition, extensionId) {
+    if (!isValidPartition(partition)) return { success: false, error: 'Partition invalide.' };
+    if (typeof extensionId !== 'string' || !extensionId) {
+      return { success: false, error: 'Identifiant d\'extension invalide.' };
+    }
+    try {
+      const ses = electronSession.fromPartition(partition);
+      const existing = ses.extensions.getAllExtensions().find(function (e) { return e.id === extensionId; });
+      const removedPath = existing ? existing.path : null;
+      ses.extensions.removeExtension(extensionId);
+      // Retirer le chemin du store.
+      if (removedPath) {
+        const store = readExtensionsStore();
+        if (Array.isArray(store[partition])) {
+          store[partition] = store[partition].filter(function (p) { return p !== removedPath; });
+          writeExtensionsStore(store);
+        }
+      }
+      log('[extensions] Retirée:', extensionId, 'de', partition);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
   });
 

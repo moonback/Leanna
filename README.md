@@ -29,11 +29,11 @@
 <br><br>
 
 <!-- Badges row 1 — Status -->
-<img src="https://img.shields.io/badge/Tests%20backend-894%20passing-00C853?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Tests backend" />
+<img src="https://img.shields.io/badge/Tests%20backend-915%20passing-00C853?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Tests backend" />
 &nbsp;
 <img src="https://img.shields.io/badge/Tests%20front-27%20passing-00C853?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests front" />
 &nbsp;
-<img src="https://img.shields.io/badge/version-1.4.0-A78BFA?style=for-the-badge" alt="Version" />
+<img src="https://img.shields.io/badge/version-1.5.0-A78BFA?style=for-the-badge" alt="Version" />
 
 <br>
 
@@ -86,7 +86,7 @@
 | 🎯 | [Système de missions](#système-de-missions) | 👁️ | [Observabilité](#observabilité) |
 | 📊 | [Estimation avant exécution](#estimation-avant-exécution) | 🖥️ | [Environnement de bureau](#environnement-de-bureau) |
 | 🤖 | [Architecture multi-agents](#architecture-multi-agents) | 💻 | [IDE et espace de travail](#ide-et-espace-de-travail) |
-| 🔧 | [Outils et compétences](#outils-et-compétences) | 🌐 | [Automatisation navigateur](#automatisation-du-navigateur) |
+| 🔧 | [Outils et compétences](#outils-et-compétences) | 🌐 | [Automatisation navigateur](#automatisation-du-navigateur) • [Navigateur intégré](#navigateur-intégré) |
 | 📚 | [Connaissance et compréhension](#connaissance-et-compréhension) | 🔀 | [Git et GitHub](#git-et-github) |
 | 🧠 | [Architecture de la mémoire](#architecture-de-la-mémoire) | 📓 | [Notebooks et RAG](#-notebooks-et-rag) |
 | 📈 | [Apprentissage et fiabilité](#apprentissage-et-fiabilité) | 🎙️ | [Assistant vocal notebook](#-assistant-vocal-du-notebook) |
@@ -1833,6 +1833,118 @@ Pour les déploiements sensibles à la sécurité, des restrictions de domaine p
 ```env
 AUTOMATION_ALLOWED_DOMAINS=""
 ```
+
+---
+
+# Navigateur intégré
+
+En complément de l'automatisation pilotée par l'agent, Leanna embarque un **navigateur web intégré** (via `<webview>` Electron) utilisable directement depuis l'IDE. L'agent peut le piloter (navigation, clics, saisie, extraction de contenu) tandis que l'utilisateur garde la main sur la barre d'adresse et les contrôles.
+
+Les composants pertinents côté interface incluent :
+
+```text
+src/components/panels/BrowserPanel.tsx          # orchestrateur : onglets + barre d'outils
+src/components/panels/BrowserTabView.tsx         # une <webview> persistante par onglet
+src/components/panels/BrowserTabStrip.tsx        # barre d'onglets
+src/components/panels/BrowserToolbar.tsx
+src/components/panels/BrowserProfileSwitcher.tsx
+src/components/panels/BrowserExtensionsMenu.tsx
+src/components/panels/useBrowserHistory.ts
+src/components/panels/useBrowserProfiles.ts
+src/components/panels/useBrowserExtensions.ts
+```
+
+Côté serveur, les outils du navigateur et la recherche web vivent dans :
+
+```text
+server/skills/browser.ts            # 28 outils browser_* exposés à l'agent
+server/skills/webSearchProvider.ts  # recherche + lecture de pages 100 % serveur
+```
+
+## Onglets multiples
+
+Le navigateur gère **plusieurs onglets**, chacun porté par sa propre `<webview>` persistante : les onglets inactifs restent chargés (masqués via CSS) et ne sont pas rechargés au retour.
+
+* barre d'onglets avec sélection, fermeture (croix ou clic molette) et bouton « nouvel onglet » (masquée tant qu'un seul onglet est ouvert) ;
+* l'onglet actif pilote la barre d'outils ; l'agent agit toujours sur l'onglet actif ;
+* les popups / `target="_blank"` (refusés côté processus principal) sont rouverts dans un **onglet d'arrière-plan** plutôt qu'une fenêtre non contrôlée ;
+* l'agent peut ouvrir un onglet via l'outil `browser_new_tab` (`url`, `activate`).
+
+## Historique et autocomplétion
+
+* l'historique de navigation est persisté localement (`localStorage`) ;
+* la barre d'adresse propose des **suggestions d'autocomplétion** classées par pertinence (correspondance en préfixe, fréquence de visite, récence) ;
+* navigation au clavier dans les suggestions (flèches, Entrée, Échap) ;
+* une action permet d'**effacer l'historique**.
+
+## Indicateurs de sécurité
+
+La barre d'adresse signale distinctement les connexions **sécurisées (HTTPS)** et **non sécurisées (HTTP)** via une icône dédiée et un libellé accessible.
+
+## Profils multiples (sessions isolées)
+
+Chaque profil correspond à une **partition de session Electron** (`persist:browser-<id>`), ce qui cloisonne **cookies, cache et stockage local** d'un profil à l'autre.
+
+* création, renommage et suppression de profils ;
+* bascule entre profils depuis la barre d'outils ;
+* un « Profil par défaut » toujours présent et non supprimable ;
+* la liste des profils et le profil actif sont persistés localement.
+
+> Changer de profil remonte la `<webview>` : l'attribut `partition` d'un `<webview>` Electron est immuable une fois l'élément attaché.
+
+## Extensions Chromium
+
+Leanna prend en charge le chargement d'**extensions Chromium décompressées** dans le navigateur intégré, par profil (donc isolées par partition de session).
+
+* chargement d'une extension via un sélecteur de dossier (dossier contenant un `manifest.json`) ;
+* liste et suppression des extensions chargées ;
+* les chemins d'extensions sont persistés dans `userData/browser-extensions.json` et rechargés automatiquement au démarrage.
+
+Le pont vers le process principal passe par des handlers IPC dédiés :
+
+```text
+electron/main.cjs     → electron/browser-extensions-list | -load | -remove
+electron/preload.cjs  → window.electronAPI.browserExtensions{List,Load,Remove}
+```
+
+> Electron ne prend en charge qu'un **sous-ensemble** de l'API Chrome Extensions et uniquement des extensions **décompressées** (pas d'installation directe depuis le Chrome Web Store). Hors environnement Electron (mode dev web), le menu Extensions est automatiquement masqué.
+
+## Recherche web côté serveur
+
+En plus de la recherche dans la webview visible, Leanna dispose d'une recherche **100 % serveur** (`webSearchProvider.ts`), beaucoup plus rapide et robuste pour collecter de l'information factuelle :
+
+* recherche via DuckDuckGo HTML avec extraction des **vrais liens** (décodage du paramètre `uddg`, pas d'URL tronquée) et détection des pages anti-bot ;
+* **lecture des pages en parallèle** côté serveur (`fetch` + extraction « mode lecture » qui privilégie `<main>`/`<article>`), sans détourner le navigateur de l'utilisateur ;
+* garde **SSRF stricte** avant toute requête (web public uniquement, jamais localhost ni IP privée/mappée) ;
+* tout texte externe est neutralisé contre l'injection de prompt ;
+* exposé à l'agent via l'outil `browser_web_search` (`query`, `maxSources`, `read`), avec sources structurées, consensus, contradictions et score de confiance.
+
+## Débogage : console, réseau et vision
+
+Pour qu'un agent puisse diagnostiquer un aperçu de projet, le navigateur capte le contexte d'exécution de la page :
+
+* **`browser_get_console`** — journal `console.log/warn/error` et échecs de ressources réseau de la page affichée, filtrables par niveau (`all`/`warn`/`error`) ;
+* **`browser_capture`** — capture visuelle de la page (`capturePage()`) puis **analyse multimodale réelle** par un modèle de vision (l'image est transmise en `inlineData`, pas en texte), pour « que vois-tu sur cette page ? », vérifier un rendu ou comparer à une maquette.
+
+## Durcissement sécurité (processus principal)
+
+Le `<webview>` charge des pages arbitraires ; le processus principal Electron applique donc plusieurs gardes :
+
+* `will-attach-webview` force `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true`, et n'autorise que les partitions de profil connues ;
+* permissions refusées par défaut (caméra, micro, géolocalisation, notifications, USB…) ;
+* popups / nouvelles fenêtres refusées (`setWindowOpenHandler`) et relayées en onglet ;
+* téléchargements silencieux bloqués, certificats invalides jamais contournés ;
+* l'ouverture externe (`openExternal`) applique une **allowlist** `http`/`https`/`mailto`.
+
+## Catalogue d'outils agent (`browser_*`)
+
+Le navigateur expose **28 outils** à l'agent, dont :
+
+* navigation : `browser_navigate`, `browser_open`, `browser_close`, `browser_back`, `browser_forward`, `browser_reload`, `browser_scroll`, `browser_new_tab` ;
+* lecture / recherche : `browser_read_content`, `browser_summarize_page`, `browser_get_links`, `browser_open_link`, `browser_search`, `browser_research`, `browser_web_search` ;
+* interaction : `browser_click`, `browser_type`, `browser_fill_form`, `browser_select_option`, `browser_click_by_role`, `browser_type_by_label` ;
+* inspection : `browser_snapshot`, `browser_inspect`, `browser_get_accessibility_snapshot`, `browser_get_element_text`, `browser_get_element_attribute`, `browser_wait_for` ;
+* diagnostic : `browser_get_console`, `browser_capture`.
 
 <br><img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="separator" width="100%"><br>
 

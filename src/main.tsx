@@ -21,6 +21,7 @@ import { useProfile } from './context/UserProfileContext.js';
 import { useAgentEventStream } from './hooks/useAgentEventStream.js';
 import { Loader2, X } from 'lucide-react';
 import { UnifiedSidebar } from './components/UnifiedSidebar.js';
+import { AgentStatusBar } from './components/AgentStatusBar.js';
 const MemoriesView = lazy(() => import('./views/MemoriesView.js'));
 const SettingsView = lazy(() => import('./views/SettingsView.js'));
 const ListsView = lazy(() => import('./views/ListsView.js'));
@@ -32,6 +33,11 @@ const DocumentsView = lazy(() => import('./views/DocumentsView.js'));
 const NotebooksView = lazy(() => import('./views/NotebooksView.js'));
 const ObservabilityView = lazy(() => import('./views/ObservabilityView.js'));
 const AutonomyView = lazy(() => import('./views/AutonomyView.js'));
+const MissionControlView = lazy(() => import('./views/MissionControlView.js'));
+const MissionTimelineView = lazy(() => import('./views/MissionTimelineView.js'));
+const MissionSimulationView = lazy(() => import('./views/MissionSimulationView.js'));
+const AgentSwarmView = lazy(() => import('./views/AgentSwarmView.js'));
+const ExplainabilityView = lazy(() => import('./views/ExplainabilityView.js'));
 // Typographie : Arial (police système) — aucun fichier de police à charger.
 import './index.css';
 
@@ -464,6 +470,13 @@ function NavSidebar() {
   return <UnifiedSidebar context="global" />;
 }
 
+/** Persistent agent status strip — hidden on the IDE (it has its own StatusBar). */
+function GlobalAgentStatusBar() {
+  const { pathname } = useLocation();
+  if (pathname === '/' || pathname === '/ide') return null;
+  return <AgentStatusBar />;
+}
+
 // ── Animated route transitions (Phase 3.5) ─────────────────────────────────
 function AnimatedRoutes() {
   const location = useLocation();
@@ -497,6 +510,11 @@ function AnimatedRoutes() {
         <Route path="/notebooks"     element={wrap(<NotebooksView />)} />
         <Route path="/observability" element={wrap(<ObservabilityView />)} />
         <Route path="/autonomy"      element={wrap(<AutonomyView />)} />
+        <Route path="/mission-control" element={wrap(<MissionControlView />)} />
+        <Route path="/mission-timeline" element={wrap(<MissionTimelineView />)} />
+        <Route path="/mission-simulation" element={wrap(<MissionSimulationView />)} />
+        <Route path="/agent-swarm"   element={wrap(<AgentSwarmView />)} />
+        <Route path="/explainability" element={wrap(<ExplainabilityView />)} />
       </Routes>
     </AnimatePresence>
   );
@@ -556,6 +574,7 @@ function Layout() {
           <NavSidebar />
           <main id="main-content" className="app-content" tabIndex={-1}>
             <IdeNavigationBridge />
+            <GlobalAgentStatusBar />
             <AnimatedRoutes />
           </main>
         </div>
